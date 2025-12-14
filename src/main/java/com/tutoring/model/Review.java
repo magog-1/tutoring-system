@@ -32,5 +32,70 @@ public class Review {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    // Конструкторы, геттеры, сеттеры
+    // Конструкторы
+    public Review() {}
+
+    public Review(Tutor tutor, Student student, Integer rating, String comment) {
+        this.tutor = tutor;
+        this.student = student;
+        this.rating = rating;
+        this.comment = comment;
+    }
+
+    // Геттеры и сеттеры
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Tutor getTutor() {
+        return tutor;
+    }
+
+    public void setTutor(Tutor tutor) {
+        this.tutor = tutor;
+    }
+
+    public Student getStudent() {
+        return student;
+    }
+
+    public void setStudent(Student student) {
+        this.student = student;
+    }
+
+    public Lesson getLesson() {
+        return lesson;
+    }
+
+    public void setLesson(Lesson lesson) {
+        this.lesson = lesson;
+    }
+
+    public Integer getRating() {
+        return rating;
+    }
+
+    public void setRating(Integer rating) {
+        this.rating = rating;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

@@ -17,8 +17,40 @@ public class Student extends User {
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private List<Lesson> lessons = new ArrayList<>();
 
-    // Конструкторы, геттеры, сеттеры
+    // Конструкторы
+    public Student() {}
 
+    public Student(String learningGoals, EducationLevel educationLevel) {
+        this.learningGoals = learningGoals;
+        this.educationLevel = educationLevel;
+    }
+
+    // Геттеры и сеттеры
+    public String getLearningGoals() {
+        return learningGoals;
+    }
+
+    public void setLearningGoals(String learningGoals) {
+        this.learningGoals = learningGoals;
+    }
+
+    public EducationLevel getEducationLevel() {
+        return educationLevel;
+    }
+
+    public void setEducationLevel(EducationLevel educationLevel) {
+        this.educationLevel = educationLevel;
+    }
+
+    public List<Lesson> getLessons() {
+        return lessons;
+    }
+
+    public void setLessons(List<Lesson> lessons) {
+        this.lessons = lessons;
+    }
+
+    // Enum
     public enum EducationLevel {
         ELEMENTARY, MIDDLE_SCHOOL, HIGH_SCHOOL,
         UNDERGRADUATE, GRADUATE, PROFESSIONAL
