@@ -20,7 +20,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf().disable() // Для разработки, в продакшене нужно настроить CSRF
+                .csrf(csrf -> csrf.disable()) // Для разработки, в продакшене нужно настроить CSRF
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/subjects/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -29,7 +29,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/student/**").hasAnyRole("STUDENT", "ADMIN")
                         .anyRequest().authenticated()
                 )
-                .httpBasic(); // Для разработки, в продакшене использовать JWT
+                .httpBasic(httpBasic -> {}); // Для разработки, в продакшене использовать JWT
 
         return http.build();
     }
