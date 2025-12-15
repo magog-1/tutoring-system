@@ -155,7 +155,7 @@ Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
 
 ### Верифицировать репетитора (замените {id} на реальный ID репетитора)
 ### Сначала посмотрите ID в ответе на регистрацию или в списке выше
-PUT http://localhost:8080/api/manager/tutors/9/verify
+PUT http://localhost:8080/api/manager/tutors/4/verify
 Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
 
 ### Получить всех пользователей
@@ -174,7 +174,7 @@ Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
 GET http://localhost:8080/api/tutors
 
 ### Получить профиль репетитора (замените {id})
-GET http://localhost:8080/api/tutors/9
+GET http://localhost:8080/api/tutors/4
 
 ### Поиск репетиторов по параметрам
 GET http://localhost:8080/api/tutors/search?subjectId=1&maxRate=2000&minRating=4.0
@@ -195,7 +195,7 @@ Content-Type: application/json
 Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
 {
-  "tutorId": 9,
+  "tutorId": 4,
   "subjectId": 1,
   "scheduledTime": "2025-12-20T15:00:00",
   "durationMinutes": 60,
@@ -208,7 +208,7 @@ Content-Type: application/json
 Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
 {
-  "tutorId": 9,
+  "tutorId": 4,
   "subjectId": 2,
   "scheduledTime": "2025-12-22T16:00:00",
   "durationMinutes": 90,
@@ -255,7 +255,7 @@ Content-Type: application/json
 Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
 {
-  "tutorId": 9,
+  "tutorId": 4,
   "lessonId": 1,
   "rating": 5,
   "comment": "Отличный преподаватель! Всё понятно объясняет, терпеливый и внимательный."
@@ -273,7 +273,7 @@ Authorization: Basic c3R1ZGVudDI6cGFzc3dvcmQxMjM=
 }
 
 ### Получить отзывы о репетиторе (публичный доступ)
-GET http://localhost:8080/api/tutors/9/reviews
+GET http://localhost:8080/api/tutors/4/reviews
 
 ### Удалить свой отзыв (замените {id} на ID отзыва)
 DELETE http://localhost:8080/api/student/reviews/1
