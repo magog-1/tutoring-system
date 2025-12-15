@@ -1,5 +1,6 @@
 package com.tutoring.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,14 +15,17 @@ public class Lesson {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
+    @JsonIgnoreProperties({"lessons", "password"})
     private Student student;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tutor_id", nullable = false)
+    @JsonIgnoreProperties({"lessons", "reviews", "password"})
     private Tutor tutor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_id", nullable = false)
+    @JsonIgnoreProperties({"tutors"})
     private Subject subject;
 
     @Column(nullable = false)
@@ -38,16 +42,15 @@ public class Lesson {
     private BigDecimal price;
 
     @Column(length = 2000)
-    private String notes; // Заметки репетитора
+    private String notes;
 
     @Column(length = 1000)
-    private String homework; // Домашнее задание
+    private String homework;
 
     private LocalDateTime createdAt;
 
     private LocalDateTime confirmedAt;
 
-    // Конструкторы
     public Lesson() {}
 
     public Lesson(Student student, Tutor tutor, Subject subject, LocalDateTime scheduledTime, 
@@ -60,7 +63,6 @@ public class Lesson {
         this.price = price;
     }
 
-    // Геттеры и сеттеры
     public Long getId() {
         return id;
     }
@@ -157,7 +159,6 @@ public class Lesson {
         this.confirmedAt = confirmedAt;
     }
 
-    // Enum
     public enum LessonStatus {
         PENDING, CONFIRMED, COMPLETED, CANCELLED
     }

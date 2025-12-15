@@ -1,11 +1,13 @@
 package com.tutoring.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "students")
+@JsonIgnoreProperties({"lessons"})
 public class Student extends User {
 
     @Column(length = 1000)
@@ -17,7 +19,6 @@ public class Student extends User {
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private List<Lesson> lessons = new ArrayList<>();
 
-    // Конструкторы
     public Student() {}
 
     public Student(String learningGoals, EducationLevel educationLevel) {
@@ -25,7 +26,6 @@ public class Student extends User {
         this.educationLevel = educationLevel;
     }
 
-    // Геттеры и сеттеры
     public String getLearningGoals() {
         return learningGoals;
     }
@@ -50,7 +50,6 @@ public class Student extends User {
         this.lessons = lessons;
     }
 
-    // Enum
     public enum EducationLevel {
         ELEMENTARY, MIDDLE_SCHOOL, HIGH_SCHOOL,
         UNDERGRADUATE, GRADUATE, PROFESSIONAL

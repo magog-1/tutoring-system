@@ -1,5 +1,6 @@
 package com.tutoring.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +23,9 @@ public class Subject {
     private SubjectCategory category;
 
     @ManyToMany(mappedBy = "subjects")
+    @JsonIgnoreProperties({"subjects", "lessons", "reviews"})
     private List<Tutor> tutors = new ArrayList<>();
 
-    // Конструкторы
     public Subject() {}
 
     public Subject(String name, String description, SubjectCategory category) {
@@ -33,7 +34,6 @@ public class Subject {
         this.category = category;
     }
 
-    // Геттеры и сеттеры
     public Long getId() {
         return id;
     }
@@ -74,7 +74,6 @@ public class Subject {
         this.tutors = tutors;
     }
 
-    // Enum
     public enum SubjectCategory {
         MATHEMATICS, LANGUAGES, SCIENCES,
         ARTS, PROGRAMMING, OTHER

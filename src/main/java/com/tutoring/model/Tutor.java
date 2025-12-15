@@ -1,5 +1,6 @@
 package com.tutoring.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -7,6 +8,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "tutors")
+@JsonIgnoreProperties({"lessons", "reviews"})
 public class Tutor extends User {
 
     @Column(length = 2000)
@@ -34,6 +36,7 @@ public class Tutor extends User {
             joinColumns = @JoinColumn(name = "tutor_id"),
             inverseJoinColumns = @JoinColumn(name = "subject_id")
     )
+    @JsonIgnoreProperties("tutors")
     private List<Subject> subjects = new ArrayList<>();
 
     @OneToMany(mappedBy = "tutor", cascade = CascadeType.ALL)
@@ -42,7 +45,6 @@ public class Tutor extends User {
     @OneToMany(mappedBy = "tutor", cascade = CascadeType.ALL)
     private List<Review> reviews = new ArrayList<>();
 
-    // Конструкторы
     public Tutor() {}
 
     public Tutor(String education, Integer experienceYears, BigDecimal hourlyRate) {
@@ -51,7 +53,6 @@ public class Tutor extends User {
         this.hourlyRate = hourlyRate;
     }
 
-    // Геттеры и сеттеры
     public String getBio() {
         return bio;
     }
