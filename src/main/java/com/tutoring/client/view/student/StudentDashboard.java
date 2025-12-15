@@ -211,7 +211,7 @@ public class StudentDashboard {
         Label titleLabel = new Label("Мои занятия");
         titleLabel.setFont(new Font(18));
         
-        lessonTable = new TableView<>();n        
+        lessonTable = new TableView<>();
         TableColumn<LessonDTO, String> tutorCol = new TableColumn<>("Репетитор");
         tutorCol.setCellValueFactory(data -> 
             new javafx.beans.property.SimpleStringProperty(
