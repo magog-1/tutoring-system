@@ -93,6 +93,13 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
         </dependency>
+        
+        <!-- Gson Java Time Adapter for LocalDateTime support -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson-javatime-serialisers</artifactId>
+            <version>1.1.2</version>
+        </dependency>
 
         <!-- Lombok (optional) -->
         <dependency>
@@ -122,6 +129,12 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.tutoring.client.TutoringClientApp</mainClass>
+                    <options>
+                        <option>--add-opens</option>
+                        <option>java.base/java.time=ALL-UNNAMED</option>
+                        <option>--add-opens</option>
+                        <option>java.base/java.lang.reflect=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
         </plugins>
