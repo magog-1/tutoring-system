@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -17,12 +18,22 @@ public class TutorService {
     @Autowired
     private TutorRepository tutorRepository;
 
+    public Optional<Tutor> findById(Long id) {
+        return tutorRepository.findById(id);
+    }
+
     public List<Tutor> findAllVerifiedTutors() {
         return tutorRepository.findByIsVerifiedTrue();
     }
 
     public List<Tutor> searchTutors(Subject subject, BigDecimal maxRate, Double minRating) {
-        List<Tutor> tutors = tutorRepository.findBySubjectsContaining(subject);
+        List<Tutor> tutors;
+        
+        if (subject != null) {
+            tutors = tutorRepository.findBySubjectsContaining(subject);
+        } else {
+            tutors = tutorRepository.findByIsVerifiedTrue();
+        }
 
         if (maxRate != null) {
             tutors = tutors.stream()
