@@ -1,5 +1,6 @@
 package com.tutoring.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -11,6 +12,9 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true)
+    private String username;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -25,6 +29,7 @@ public class User {
     private String lastName;
 
     @Column(nullable = false)
+    @JsonProperty("phoneNumber") // Позволяет принимать phoneNumber в JSON
     private String phone;
 
     @Enumerated(EnumType.STRING)
@@ -59,6 +64,14 @@ public class User {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getEmail() {
@@ -99,6 +112,11 @@ public class User {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    @JsonProperty("phoneNumber")
+    public void setPhoneNumber(String phoneNumber) {
+        this.phone = phoneNumber;
     }
 
     public UserRole getRole() {
