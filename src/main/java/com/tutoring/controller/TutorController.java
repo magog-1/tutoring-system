@@ -2,12 +2,16 @@ package com.tutoring.controller;
 
 import com.tutoring.model.Lesson;
 import com.tutoring.model.Tutor;
+import com.tutoring.repository.TutorRepository;
 import com.tutoring.service.LessonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tutor")
@@ -16,15 +20,25 @@ public class TutorController {
     @Autowired
     private LessonService lessonService;
 
+    @Autowired
+    private TutorRepository tutorRepository;
+
     @GetMapping("/lessons")
-    public ResponseEntity<List<Lesson>> getMyLessons(@RequestParam Long tutorId) {
+    public ResponseEntity<?> getMyLessons() {
         try {
-            Tutor tutor = new Tutor();
-            tutor.setId(tutorId);
+            // Получаем текущего авторизованного пользователя
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            // Находим репетитора
+            Tutor tutor = tutorRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
+
             List<Lesson> lessons = lessonService.getTutorLessons(tutor);
             return ResponseEntity.ok(lessons);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Ошибка: " + e.getMessage());
         }
     }
 
@@ -43,9 +57,10 @@ public class TutorController {
     @PutMapping("/lessons/{lessonId}/complete")
     public ResponseEntity<?> completeLesson(
             @PathVariable Long lessonId,
-            @RequestParam String notes,
-            @RequestParam(required = false) String homework) {
+            @RequestBody Map<String, String> request) {
         try {
+            String notes = request.get("notes");
+            String homework = request.get("homework");
             lessonService.completeLesson(lessonId, notes, homework);
             return ResponseEntity.ok("Занятие завершено");
         } catch (Exception e) {
