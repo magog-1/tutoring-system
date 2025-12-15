@@ -1,15 +1,17 @@
 package com.tutoring.client.api;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 
 public class ApiClient {
     private static final String BASE_URL = "http://localhost:8080/api";
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     
     private final OkHttpClient client;
     private final Gson gson;
@@ -17,8 +19,34 @@ public class ApiClient {
     
     public ApiClient() {
         this.client = new OkHttpClient();
+        
+        // Создаём Gson с кастомным адаптером для LocalDateTime
         this.gson = new GsonBuilder()
-                .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+                .registerTypeAdapter(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
+                    @Override
+                    public LocalDateTime deserialize(JsonElement json, java.lang.reflect.Type typeOfT,
+                                                     JsonDeserializationContext context) throws JsonParseException {
+                        if (json.isJsonNull()) {
+                            return null;
+                        }
+                        String dateTimeString = json.getAsString();
+                        // Поддерживаем разные форматы
+                        try {
+                            return LocalDateTime.parse(dateTimeString, FORMATTER);
+                        } catch (Exception e) {
+                            // Пробуем ISO формат
+                            return LocalDateTime.parse(dateTimeString);
+                        }
+                    }
+                })
+                .registerTypeAdapter(LocalDateTime.class, new JsonSerializer<LocalDateTime>() {
+                    @Override
+                    public JsonElement serialize(LocalDateTime src, java.lang.reflect.Type typeOfSrc,
+                                                 JsonSerializationContext context) {
+                        return new JsonPrimitive(src.format(FORMATTER));
+                    }
+                })
+                .setLenient()
                 .create();
     }
     
