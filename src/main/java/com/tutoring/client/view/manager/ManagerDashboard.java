@@ -1,7 +1,7 @@
 package com.tutoring.client.view.manager;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.TutorDTO;
 import com.tutoring.client.view.LoginView;
@@ -128,12 +128,8 @@ public class ManagerDashboard {
                     return;
                 }
                 
-                Gson gson = new GsonBuilder()
-                    .setLenient()
-                    .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-                    .create();
+                Gson gson = GsonProvider.getGson();
                 
-                // Парсим как массив
                 TutorDTO[] tutorsArray = gson.fromJson(response, TutorDTO[].class);
                 List<TutorDTO> tutors = tutorsArray != null ? Arrays.asList(tutorsArray) : new ArrayList<>();
                 System.out.println("[DEBUG] Распарсено " + tutors.size() + " репетиторов");
