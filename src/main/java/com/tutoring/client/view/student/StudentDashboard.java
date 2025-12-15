@@ -2,6 +2,7 @@ package com.tutoring.client.view.student;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.*;
 import com.tutoring.client.view.LoginView;
@@ -34,7 +35,6 @@ public class StudentDashboard {
     private void createView() {
         view = new BorderPane();
         
-        // Top - заголовок
         VBox topBox = new VBox(10);
         topBox.setPadding(new Insets(15));
         topBox.setStyle("-fx-background-color: #2196F3;");
@@ -56,11 +56,9 @@ public class StudentDashboard {
         topBox.getChildren().addAll(topContent, logoutButton);
         view.setTop(topBox);
         
-        // Left - меню
         VBox leftMenu = createMenu();
         view.setLeft(leftMenu);
         
-        // Center - контент
         showTutorSearch();
     }
     
@@ -89,21 +87,29 @@ public class StudentDashboard {
         Label titleLabel = new Label("Поиск репетиторов");
         titleLabel.setFont(new Font(18));
         
-        // Таблица репетиторов
         tutorTable = new TableView<>();
         
         TableColumn<TutorDTO, String> nameCol = new TableColumn<>("Имя");
         nameCol.setCellValueFactory(data -> 
             new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getFirstName() + " " + data.getValue().getLastName()
+                (data.getValue().getFirstName() != null ? data.getValue().getFirstName() : "") + " " + 
+                (data.getValue().getLastName() != null ? data.getValue().getLastName() : "")
             )
         );
         
         TableColumn<TutorDTO, String> educationCol = new TableColumn<>("Образование");
-        educationCol.setCellValueFactory(new PropertyValueFactory<>("education"));
+        educationCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getEducation() != null ? data.getValue().getEducation() : "N/A"
+            )
+        );
         
-        TableColumn<TutorDTO, Double> ratingCol = new TableColumn<>("Рейтинг");
-        ratingCol.setCellValueFactory(new PropertyValueFactory<>("rating"));
+        TableColumn<TutorDTO, String> ratingCol = new TableColumn<>("Рейтинг");
+        ratingCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getRating() != null ? String.format("%.1f", data.getValue().getRating()) : "0.0"
+            )
+        );
         
         TableColumn<TutorDTO, String> rateCol = new TableColumn<>("Цена/час");
         rateCol.setCellValueFactory(data -> 
@@ -131,25 +137,52 @@ public class StudentDashboard {
     private void loadTutors() {
         new Thread(() -> {
             try {
-                String response = Session.getInstance().getApiClient()
-                    .get("/tutors", String.class);
+                System.out.println("[DEBUG] Запрашиваем /tutors...");
+                String response = Session.getInstance().getApiClient().get("/tutors", String.class);
+                System.out.println("[DEBUG] Получен ответ: " + response);
+                
+                if (response == null || response.trim().isEmpty()) {
+                    System.out.println("[DEBUG] Пустой ответ от сервера");
+                    Platform.runLater(() -> {
+                        tutorTable.setItems(FXCollections.observableArrayList());
+                    });
+                    return;
+                }
                 
                 Gson gson = new GsonBuilder()
+                    .setLenient()
                     .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
                     .create();
                 
-                // Парсим как массив
-                TutorDTO[] tutorsArray = gson.fromJson(response, TutorDTO[].class);
-                List<TutorDTO> tutors = tutorsArray != null ? Arrays.asList(tutorsArray) : new ArrayList<>();
+                List<TutorDTO> tutors = new ArrayList<>();
                 
+                try {
+                    TutorDTO[] tutorsArray = gson.fromJson(response, TutorDTO[].class);
+                    if (tutorsArray != null) {
+                        tutors = Arrays.asList(tutorsArray);
+                        System.out.println("[DEBUG] Успешно распарсено " + tutors.size() + " репетиторов");
+                    }
+                } catch (JsonSyntaxException jsonEx) {
+                    System.err.println("[ERROR] Ошибка парсинга JSON: " + jsonEx.getMessage());
+                    jsonEx.printStackTrace();
+                    throw jsonEx;
+                }
+                
+                final List<TutorDTO> finalTutors = tutors;
                 Platform.runLater(() -> {
-                    ObservableList<TutorDTO> data = FXCollections.observableArrayList(tutors);
+                    ObservableList<TutorDTO> data = FXCollections.observableArrayList(finalTutors);
                     tutorTable.setItems(data);
+                    System.out.println("[DEBUG] Данные загружены в таблицу");
                 });
             } catch (Exception ex) {
+                System.err.println("[ERROR] Ошибка при загрузке репетиторов:");
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка загрузки: " + ex.getMessage());
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Ошибка");
+                    alert.setHeaderText("Ошибка загрузки данных");
+                    alert.setContentText("Не удалось загрузить список репетиторов.\n\n" + 
+                        ex.getClass().getSimpleName() + ": " + ex.getMessage());
                     alert.showAndWait();
                 });
             }
@@ -166,8 +199,8 @@ public class StudentDashboard {
         
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Бронирование");
-        alert.setHeaderText("Бронирование занятия с " + selectedTutor.getFirstName());
-        alert.setContentText("Функционал в разработке. Используйте API для бронирования.");
+        alert.setHeaderText("Бронирование занятия");
+        alert.setContentText("Функционал в разработке.\nИспользуйте HTTP запросы для бронирования.");
         alert.showAndWait();
     }
     
@@ -178,31 +211,34 @@ public class StudentDashboard {
         Label titleLabel = new Label("Мои занятия");
         titleLabel.setFont(new Font(18));
         
-        lessonTable = new TableView<>();
-        
+        lessonTable = new TableView<>();n        
         TableColumn<LessonDTO, String> tutorCol = new TableColumn<>("Репетитор");
         tutorCol.setCellValueFactory(data -> 
             new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getTutor() != null ? data.getValue().getTutor().getFullName() : ""
+                data.getValue().getTutor() != null ? data.getValue().getTutor().getFullName() : "N/A"
             )
         );
         
         TableColumn<LessonDTO, String> subjectCol = new TableColumn<>("Предмет");
         subjectCol.setCellValueFactory(data -> 
             new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getSubject() != null ? data.getValue().getSubject().getName() : ""
+                data.getValue().getSubject() != null ? data.getValue().getSubject().getName() : "N/A"
             )
         );
         
         TableColumn<LessonDTO, String> timeCol = new TableColumn<>("Время");
         timeCol.setCellValueFactory(data -> {
             LocalDateTime time = data.getValue().getScheduledTime();
-            String formatted = time != null ? time.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "";
+            String formatted = time != null ? time.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "N/A";
             return new javafx.beans.property.SimpleStringProperty(formatted);
         });
         
         TableColumn<LessonDTO, String> statusCol = new TableColumn<>("Статус");
-        statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
+        statusCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getStatus() != null ? data.getValue().getStatus() : "N/A"
+            )
+        );
         
         lessonTable.getColumns().addAll(tutorCol, subjectCol, timeCol, statusCol);
         
@@ -218,14 +254,20 @@ public class StudentDashboard {
     private void loadMyLessons() {
         new Thread(() -> {
             try {
-                String response = Session.getInstance().getApiClient()
-                    .get("/student/lessons", String.class);
+                System.out.println("[DEBUG] Запрашиваем /student/lessons...");
+                String response = Session.getInstance().getApiClient().get("/student/lessons", String.class);
+                System.out.println("[DEBUG] Получен ответ: " + response);
+                
+                if (response == null || response.trim().isEmpty()) {
+                    Platform.runLater(() -> lessonTable.setItems(FXCollections.observableArrayList()));
+                    return;
+                }
                 
                 Gson gson = new GsonBuilder()
+                    .setLenient()
                     .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
                     .create();
                 
-                // Парсим как массив
                 LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
                 List<LessonDTO> lessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
                 
@@ -234,9 +276,10 @@ public class StudentDashboard {
                     lessonTable.setItems(data);
                 });
             } catch (Exception ex) {
+                System.err.println("[ERROR] Ошибка при загрузке занятий:");
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка загрузки занятий: " + ex.getMessage());
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка загрузки: " + ex.getMessage());
                     alert.showAndWait();
                 });
             }
