@@ -1,8 +1,8 @@
 package com.tutoring.client.view.student;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.*;
 import com.tutoring.client.view.LoginView;
@@ -149,11 +149,7 @@ public class StudentDashboard {
                     return;
                 }
                 
-                Gson gson = new GsonBuilder()
-                    .setLenient()
-                    .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-                    .create();
-                
+                Gson gson = GsonProvider.getGson();
                 List<TutorDTO> tutors = new ArrayList<>();
                 
                 try {
@@ -212,6 +208,7 @@ public class StudentDashboard {
         titleLabel.setFont(new Font(18));
         
         lessonTable = new TableView<>();
+        
         TableColumn<LessonDTO, String> tutorCol = new TableColumn<>("Репетитор");
         tutorCol.setCellValueFactory(data -> 
             new javafx.beans.property.SimpleStringProperty(
@@ -263,13 +260,12 @@ public class StudentDashboard {
                     return;
                 }
                 
-                Gson gson = new GsonBuilder()
-                    .setLenient()
-                    .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-                    .create();
+                Gson gson = GsonProvider.getGson();
                 
                 LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
                 List<LessonDTO> lessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
+                
+                System.out.println("[DEBUG] Распарсено " + lessons.size() + " занятий");
                 
                 Platform.runLater(() -> {
                     ObservableList<LessonDTO> data = FXCollections.observableArrayList(lessons);
