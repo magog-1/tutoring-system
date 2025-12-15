@@ -1,90 +1,19 @@
 ### Тестирование API системы онлайн-репетиторства
-### Используйте зеленые стрелки слева от запросов для выполнения
+### Используйте зелёные стрелки слева от запросов для выполнения
+### Выполняйте запросы по порядку для правильной работы системы
 
 ### ===========================================
-### 1. ТЕСТИРОВАНИЕ ПРЕДМЕТОВ
+### ВАЖНО: Формат авторизации
 ### ===========================================
-
-### Получить все предметы (доступно всем)
-GET http://localhost:8080/api/subjects
-
-### Создать предмет Математика (требуется роль MANAGER)
-POST http://localhost:8080/api/manager/subjects
-Content-Type: application/json
-Authorization: Basic manager:password
-
-{
-  "name": "Математика",
-  "description": "Алгебра, геометрия, математический анализ",
-  "category": "MATHEMATICS"
-}
-
-### Создать предмет Английский язык
-POST http://localhost:8080/api/manager/subjects
-Content-Type: application/json
-Authorization: Basic manager:password
-
-{
-  "name": "Английский язык",
-  "description": "Грамматика, разговорная практика, подготовка к экзаменам",
-  "category": "LANGUAGES"
-}
-
-### Создать предмет Программирование
-POST http://localhost:8080/api/manager/subjects
-Content-Type: application/json
-Authorization: Basic manager:password
-
-{
-  "name": "Программирование",
-  "description": "Java, Python, алгоритмы и структуры данных",
-  "category": "PROGRAMMING"
-}
-
-### Обновить предмет (замените {subjectId} на реальный ID)
-PUT http://localhost:8080/api/manager/subjects/1
-Content-Type: application/json
-Authorization: Basic manager:password
-
-{
-  "name": "Высшая математика",
-  "description": "Математический анализ, линейная алгебра",
-  "category": "MATHEMATICS"
-}
+### IntelliJ IDEA автоматически кодирует в Base64
+### Формат: Authorization: Basic username password (с пробелом)
+### Или используйте готовый Base64: Authorization: Basic base64string
 
 ### ===========================================
-### 2. РЕГИСТРАЦИЯ И АВТОРИЗАЦИЯ
+### 1. РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЕЙ
 ### ===========================================
 
-### Регистрация студента
-POST http://localhost:8080/api/auth/register
-Content-Type: application/json
-
-{
-  "username": "student1",
-  "email": "student1@test.com",
-  "password": "password123",
-  "role": "STUDENT",
-  "firstName": "Иван",
-  "lastName": "Петров",
-  "phoneNumber": "+79991234567"
-}
-
-### Регистрация репетитора
-POST http://localhost:8080/api/auth/register
-Content-Type: application/json
-
-{
-  "username": "tutor1",
-  "email": "tutor1@test.com",
-  "password": "password123",
-  "role": "TUTOR",
-  "firstName": "Мария",
-  "lastName": "Смирнова",
-  "phoneNumber": "+79997654321"
-}
-
-### Регистрация менеджера
+### Регистрация менеджера (для управления системой)
 POST http://localhost:8080/api/auth/register
 Content-Type: application/json
 
@@ -98,135 +27,300 @@ Content-Type: application/json
   "phoneNumber": "+79991111111"
 }
 
-### Вход в систему (получение токена - если используется)
-POST http://localhost:8080/api/auth/login
+### Регистрация студента 1
+POST http://localhost:8080/api/auth/register
 Content-Type: application/json
 
 {
   "username": "student1",
-  "password": "password123"
+  "email": "student1@test.com",
+  "password": "password123",
+  "role": "STUDENT",
+  "firstName": "Иван",
+  "lastName": "Петров",
+  "phoneNumber": "+79991234567"
+}
+
+### Регистрация студента 2
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "student2",
+  "email": "student2@test.com",
+  "password": "password123",
+  "role": "STUDENT",
+  "firstName": "Анна",
+  "lastName": "Сидорова",
+  "phoneNumber": "+79991234568"
+}
+
+### Регистрация репетитора 1
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "tutor1",
+  "email": "tutor1@test.com",
+  "password": "password123",
+  "role": "TUTOR",
+  "firstName": "Мария",
+  "lastName": "Смирнова",
+  "phoneNumber": "+79997654321"
+}
+
+### Регистрация репетитора 2
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "tutor2",
+  "email": "tutor2@test.com",
+  "password": "password123",
+  "role": "TUTOR",
+  "firstName": "Алексей",
+  "lastName": "Иванов",
+  "phoneNumber": "+79997654322"
 }
 
 ### ===========================================
-### 3. РАБОТА С РЕПЕТИТОРАМИ
+### 2. СОЗДАНИЕ ПРЕДМЕТОВ (требуется роль MANAGER)
+### ===========================================
+
+### Создать предмет: Математика
+POST http://localhost:8080/api/manager/subjects
+Content-Type: application/json
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+{
+  "name": "Математика",
+  "description": "Алгебра, геометрия, математический анализ",
+  "category": "MATHEMATICS"
+}
+
+### Создать предмет: Английский язык
+POST http://localhost:8080/api/manager/subjects
+Content-Type: application/json
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+{
+  "name": "Английский язык",
+  "description": "Грамматика, разговорная практика, подготовка к экзаменам",
+  "category": "LANGUAGES"
+}
+
+### Создать предмет: Программирование
+POST http://localhost:8080/api/manager/subjects
+Content-Type: application/json
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+{
+  "name": "Программирование",
+  "description": "Java, Python, алгоритмы и структуры данных",
+  "category": "PROGRAMMING"
+}
+
+### Создать предмет: Физика
+POST http://localhost:8080/api/manager/subjects
+Content-Type: application/json
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+{
+  "name": "Физика",
+  "description": "Механика, электродинамика, оптика",
+  "category": "SCIENCES"
+}
+
+### Получить все предметы (публичный доступ)
+GET http://localhost:8080/api/subjects
+
+### Обновить предмет (замените {id} на реальный ID)
+PUT http://localhost:8080/api/manager/subjects/1
+Content-Type: application/json
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+{
+  "name": "Высшая математика",
+  "description": "Математический анализ, линейная алгебра, дифференциальные уравнения",
+  "category": "MATHEMATICS"
+}
+
+### ===========================================
+### 3. УПРАВЛЕНИЕ РЕПЕТИТОРАМИ (MANAGER)
+### ===========================================
+
+### Получить всех репетиторов, ожидающих верификации
+GET http://localhost:8080/api/manager/tutors/pending
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+### Верифицировать репетитора (замените {id} на реальный ID репетитора)
+### Сначала посмотрите ID в ответе на регистрацию или в списке выше
+PUT http://localhost:8080/api/manager/tutors/9/verify
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+### Получить всех пользователей
+GET http://localhost:8080/api/manager/users
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+### Получить пользователей по роли
+GET http://localhost:8080/api/manager/users?role=STUDENT
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
+
+### ===========================================
+### 4. ПУБЛИЧНЫЙ ДОСТУП К РЕПЕТИТОРАМ
 ### ===========================================
 
 ### Получить всех верифицированных репетиторов
-GET http://localhost:8080/api/manager/tutors/pending
-Authorization: Basic manager:password
+GET http://localhost:8080/api/tutors
 
-### Поиск репетиторов по предмету (замените ID)
+### Получить профиль репетитора (замените {id})
+GET http://localhost:8080/api/tutors/9
+
+### Поиск репетиторов по параметрам
 GET http://localhost:8080/api/tutors/search?subjectId=1&maxRate=2000&minRating=4.0
 
-### Верифицировать репетитора (замените {tutorId})
-PUT http://localhost:8080/api/manager/tutors/1/verify
-Authorization: Basic manager:password
+### Поиск репетиторов только по предмету
+GET http://localhost:8080/api/tutors/search?subjectId=1
 
-### Получить профиль репетитора
-GET http://localhost:8080/api/tutors/1
-
-### Получить отзывы о репетиторе
-GET http://localhost:8080/api/tutors/1/reviews
+### Поиск репетиторов только по цене
+GET http://localhost:8080/api/tutors/search?maxRate=1500
 
 ### ===========================================
-### 4. БРОНИРОВАНИЕ ЗАНЯТИЙ (СТУДЕНТ)
+### 5. БРОНИРОВАНИЕ ЗАНЯТИЙ (STUDENT)
 ### ===========================================
 
 ### Забронировать занятие
-POST http://localhost:8080/api/student/lessons
+POST http://localhost:8080/api/student/lessons/book
 Content-Type: application/json
-Authorization: Basic student1:password123
+Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
 {
-  "tutorId": 1,
+  "tutorId": 9,
   "subjectId": 1,
   "scheduledTime": "2025-12-20T15:00:00",
   "durationMinutes": 60,
   "price": 1500
 }
 
+### Забронировать ещё одно занятие
+POST http://localhost:8080/api/student/lessons/book
+Content-Type: application/json
+Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
+
+{
+  "tutorId": 9,
+  "subjectId": 2,
+  "scheduledTime": "2025-12-22T16:00:00",
+  "durationMinutes": 90,
+  "price": 2000
+}
+
 ### Получить мои занятия (студент)
 GET http://localhost:8080/api/student/lessons
-Authorization: Basic student1:password123
+Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
-### Отменить занятие
-DELETE http://localhost:8080/api/student/lessons/1
-Authorization: Basic student1:password123
+### Получить всех доступных репетиторов (студент)
+GET http://localhost:8080/api/student/tutors
+Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
 ### ===========================================
-### 5. УПРАВЛЕНИЕ ЗАНЯТИЯМИ (РЕПЕТИТОР)
+### 6. УПРАВЛЕНИЕ ЗАНЯТИЯМИ (TUTOR)
 ### ===========================================
 
 ### Получить мои занятия (репетитор)
 GET http://localhost:8080/api/tutor/lessons
-Authorization: Basic tutor1:password123
+Authorization: Basic dHV0b3IxOnBhc3N3b3JkMTIz
 
-### Подтвердить занятие
+### Подтвердить занятие (замените {id} на ID занятия)
 PUT http://localhost:8080/api/tutor/lessons/1/confirm
-Authorization: Basic tutor1:password123
+Authorization: Basic dHV0b3IxOnBhc3N3b3JkMTIz
 
 ### Завершить занятие с заметками
 PUT http://localhost:8080/api/tutor/lessons/1/complete
 Content-Type: application/json
-Authorization: Basic tutor1:password123
+Authorization: Basic dHV0b3IxOnBhc3N3b3JkMTIz
 
 {
-  "notes": "Студент хорошо усвоил тему производных",
-  "homework": "Решить задачи 15-20 из учебника"
+  "notes": "Студент хорошо усвоил тему производных. Решили 15 задач.",
+  "homework": "Решить задачи 15-20 из учебника, повторить правила дифференцирования"
 }
 
 ### ===========================================
-### 6. ОТЗЫВЫ
+### 7. ОТЗЫВЫ
 ### ===========================================
 
-### Оставить отзыв репетитору
+### Оставить отзыв репетитору (студент)
 POST http://localhost:8080/api/student/reviews
 Content-Type: application/json
-Authorization: Basic student1:password123
+Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
 {
-  "tutorId": 1,
+  "tutorId": 9,
   "lessonId": 1,
   "rating": 5,
-  "comment": "Отличный преподаватель! Всё понятно объясняет."
+  "comment": "Отличный преподаватель! Всё понятно объясняет, терпеливый и внимательный."
 }
 
-### Получить отзывы репетитора
-GET http://localhost:8080/api/tutors/1/reviews
+### Оставить ещё один отзыв (от другого студента)
+POST http://localhost:8080/api/student/reviews
+Content-Type: application/json
+Authorization: Basic c3R1ZGVudDI6cGFzc3dvcmQxMjM=
 
-### Удалить свой отзыв
+{
+  "tutorId": 9,
+  "rating": 4,
+  "comment": "Хороший репетитор, помог разобраться в сложной теме."
+}
+
+### Получить отзывы о репетиторе (публичный доступ)
+GET http://localhost:8080/api/tutors/9/reviews
+
+### Удалить свой отзыв (замените {id} на ID отзыва)
 DELETE http://localhost:8080/api/student/reviews/1
-Authorization: Basic student1:password123
+Authorization: Basic c3R1ZGVudDE6cGFzc3dvcmQxMjM=
 
 ### ===========================================
-### 7. СТАТИСТИКА (АДМИН)
+### 8. СТАТИСТИКА (ADMIN/MANAGER)
 ### ===========================================
 
 ### Получить общую статистику
 GET http://localhost:8080/api/statistics/general
-Authorization: Basic admin:password
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
 
 ### Популярность предметов
 GET http://localhost:8080/api/statistics/subjects/popularity
-Authorization: Basic admin:password
+Authorization: Basic bWFuYWdlcjpwYXNzd29yZA==
 
 ### ===========================================
-### 8. УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ (МЕНЕДЖЕР)
+### ПРИМЕЧАНИЯ И СОВЕТЫ
 ### ===========================================
-
-### Получить всех пользователей
-GET http://localhost:8080/api/manager/users
-Authorization: Basic manager:password
-
-### Получить пользователей по роли
-GET http://localhost:8080/api/manager/users?role=STUDENT
-Authorization: Basic manager:password
-
-### ===========================================
-### ПРИМЕЧАНИЯ:
 ### 1. Замените {id} на реальные ID из ответов предыдущих запросов
-### 2. Authorization: Basic использует формат username:password
-### 3. Сначала создайте предметы, затем регистрируйте пользователей
-### 4. Репетиторы должны быть верифицированы менеджером
-### 5. Для бронирования нужны существующие tutor и subject
+### 2. Base64 строки для авторизации:
+###    - manager:password = bWFuYWdlcjpwYXNzd29yZA==
+###    - student1:password123 = c3R1ZGVudDE6cGFzc3dvcmQxMjM=
+###    - student2:password123 = c3R1ZGVudDI6cGFzc3dvcmQxMjM=
+###    - tutor1:password123 = dHV0b3IxOnBhc3N3b3JkMTIz
+###    - tutor2:password123 = dHV0b3IyOnBhc3N3b3JkMTIz
+### 3. Сначала создайте менеджера и предметы
+### 4. Затем зарегистрируйте студентов и репетиторов
+### 5. Верифицируйте репетиторов через менеджера
+### 6. Только после этого можно бронировать занятия
+### 7. Репетитор должен завершить занятие перед тем, как студент сможет оставить отзыв
+### 8. При ошибках смотрите логи в консоли Spring Boot
+### ===========================================
+
+### ===========================================
+### ТЕСТОВЫЙ СЦЕНАРИЙ (ПОЛНЫЙ ЦИКЛ)
+### ===========================================
+### Выполните по порядку для тестирования всей системы:
+### 1. Зарегистрируйте менеджера
+### 2. Создайте 3-4 предмета
+### 3. Зарегистрируйте 1-2 студентов
+### 4. Зарегистрируйте 1-2 репетиторов
+### 5. Верифицируйте репетиторов (менеджер)
+### 6. Забронируйте занятие (студент)
+### 7. Подтвердите занятие (репетитор)
+### 8. Завершите занятие (репетитор)
+### 9. Оставьте отзыв (студент)
+### 10. Проверьте отзывы и статистику
 ### ===========================================
