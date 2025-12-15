@@ -29,7 +29,7 @@ public class ManagerController {
     public ResponseEntity<?> getPendingTutors() {
         try {
             // Получаем всех репетиторов, ожидающих верификации
-            List<Tutor> pendingTutors = tutorService.findAllVerifiedTutors();
+            List<Tutor> pendingTutors = tutorService.findAllPendingTutors();
             return ResponseEntity.ok(pendingTutors);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Ошибка при получении списка репетиторов");

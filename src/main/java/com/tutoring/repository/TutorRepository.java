@@ -17,6 +17,8 @@ public interface TutorRepository extends JpaRepository<Tutor, Long> {
 
     List<Tutor> findByIsVerifiedTrue();
 
+    List<Tutor> findByIsVerifiedFalse();
+
     List<Tutor> findBySubjectsContaining(Subject subject);
 
     @Query("SELECT t FROM Tutor t WHERE t.hourlyRate BETWEEN :minRate AND :maxRate")

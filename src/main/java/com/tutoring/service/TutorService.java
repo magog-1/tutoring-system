@@ -26,6 +26,10 @@ public class TutorService {
         return tutorRepository.findByIsVerifiedTrue();
     }
 
+    public List<Tutor> findAllPendingTutors() {
+        return tutorRepository.findByIsVerifiedFalse();
+    }
+
     public List<Tutor> searchTutors(Subject subject, BigDecimal maxRate, Double minRating) {
         List<Tutor> tutors;
         
