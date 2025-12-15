@@ -30,6 +30,8 @@ public class PublicTutorController {
     public ResponseEntity<?> getAllVerifiedTutors() {
         try {
             List<Tutor> tutors = tutorService.findAllVerifiedTutors();
+            // Явно загружаем subjects для каждого репетитора
+            tutors.forEach(tutor -> tutor.getSubjects().size());
             return ResponseEntity.ok(tutors);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Ошибка при получении репетиторов");
@@ -41,6 +43,8 @@ public class PublicTutorController {
         try {
             Tutor tutor = tutorService.findById(tutorId)
                     .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
+            // Явно загружаем subjects
+            tutor.getSubjects().size();
             return ResponseEntity.ok(tutor);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -72,6 +76,8 @@ public class PublicTutorController {
             }
 
             List<Tutor> tutors = tutorService.searchTutors(subject, maxRate, minRating);
+            // Явно загружаем subjects
+            tutors.forEach(tutor -> tutor.getSubjects().size());
             return ResponseEntity.ok(tutors);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
