@@ -24,6 +24,7 @@ public class TutorDashboard {
     private BorderPane view;
     private Stage primaryStage;
     private TableView<LessonDTO> lessonsTable;
+    private ComboBox<String> statusFilter;
     
     public TutorDashboard(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -98,7 +99,7 @@ public class TutorDashboard {
         
         Label filterLabel = new Label("Фильтр:");
         
-        ComboBox<String> statusFilter = new ComboBox<>();
+        statusFilter = new ComboBox<>();
         statusFilter.getItems().addAll("Все", "Запланировано", "Завершено", "Отменено");
         statusFilter.setValue("Все");
         statusFilter.setOnAction(e -> loadMyLessons(statusFilter.getValue()));
@@ -166,16 +167,10 @@ public class TutorDashboard {
         Button viewDetailsButton = new Button("Подробности");
         viewDetailsButton.setOnAction(e -> viewLessonDetails());
         
-        Button addNotesButton = new Button("Добавить заметки");
-        addNotesButton.setOnAction(e -> addLessonNotes());
-        
         Button completeButton = new Button("Завершить");
         completeButton.setOnAction(e -> completeLesson());
         
-        Button cancelButton = new Button("Отменить");
-        cancelButton.setOnAction(e -> cancelLesson());
-        
-        buttonBox.getChildren().addAll(refreshButton, viewDetailsButton, addNotesButton, completeButton, cancelButton);
+        buttonBox.getChildren().addAll(refreshButton, viewDetailsButton, completeButton);
         
         content.getChildren().addAll(titleLabel, filterBox, lessonsTable, buttonBox);
         view.setCenter(content);
@@ -267,24 +262,6 @@ public class TutorDashboard {
         alert.showAndWait();
     }
     
-    private void addLessonNotes() {
-        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showWarning("Выберите занятие");
-            return;
-        }
-        
-        TextInputDialog dialog = new TextInputDialog(selected.getNotes() != null ? selected.getNotes() : "");
-        dialog.setTitle("Заметки к занятию");
-        dialog.setHeaderText("Занятие #" + selected.getId());
-        dialog.setContentText("Заметки:");
-        
-        dialog.showAndWait().ifPresent(notes -> {
-            // TODO: Отправить на сервер
-            showInfo("Заметки сохранены (функционал в разработке)");
-        });
-    }
-    
     private void completeLesson() {
         LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
@@ -297,41 +274,68 @@ public class TutorDashboard {
             return;
         }
         
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Подтверждение");
-        confirm.setHeaderText("Завершить занятие?");
-        confirm.setContentText("Занятие #" + selected.getId() + " будет отмечено как завершенное.");
+        // Диалог для ввода заметок и ДЗ
+        Dialog<Map<String, String>> dialog = new Dialog<>();
+        dialog.setTitle("Завершение занятия");
+        dialog.setHeaderText("Занятие #" + selected.getId());
         
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                // TODO: Отправить на сервер
-                showInfo("Занятие завершено (функционал в разработке)");
+        ButtonType completeButtonType = new ButtonType("Завершить", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(completeButtonType, ButtonType.CANCEL);
+        
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+        
+        TextArea notesArea = new TextArea();
+        notesArea.setPromptText("Заметки о занятии...");
+        notesArea.setPrefRowCount(3);
+        notesArea.setText(selected.getNotes() != null ? selected.getNotes() : "");
+        
+        TextArea homeworkArea = new TextArea();
+        homeworkArea.setPromptText("Домашнее задание...");
+        homeworkArea.setPrefRowCount(3);
+        homeworkArea.setText(selected.getHomework() != null ? selected.getHomework() : "");
+        
+        grid.add(new Label("Заметки:"), 0, 0);
+        grid.add(notesArea, 0, 1);
+        grid.add(new Label("Домашнее задание:"), 0, 2);
+        grid.add(homeworkArea, 0, 3);
+        
+        dialog.getDialogPane().setContent(grid);
+        
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == completeButtonType) {
+                Map<String, String> result = new HashMap<>();
+                result.put("notes", notesArea.getText());
+                result.put("homework", homeworkArea.getText());
+                return result;
             }
+            return null;
         });
-    }
-    
-    private void cancelLesson() {
-        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showWarning("Выберите занятие");
-            return;
-        }
         
-        if ("CANCELLED".equalsIgnoreCase(selected.getStatus())) {
-            showWarning("Занятие уже отменено");
-            return;
-        }
-        
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Подтверждение");
-        confirm.setHeaderText("Отменить занятие?");
-        confirm.setContentText("Вы уверены, что хотите отменить занятие #" + selected.getId() + "?");
-        
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                // TODO: Отправить на сервер
-                showInfo("Занятие отменено (функционал в разработке)");
-            }
+        dialog.showAndWait().ifPresent(data -> {
+            new Thread(() -> {
+                try {
+                    // Отправляем запрос на завершение
+                    Gson gson = GsonProvider.getGson();
+                    String jsonBody = gson.toJson(data);
+                    
+                    Session.getInstance().getApiClient()
+                        .put("/tutor/lessons/" + selected.getId() + "/complete", jsonBody);
+                    
+                    Platform.runLater(() -> {
+                        showInfo("Занятие успешно завершено!");
+                        loadMyLessons(statusFilter.getValue());
+                    });
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка: " + ex.getMessage());
+                        alert.showAndWait();
+                    });
+                }
+            }).start();
         });
     }
     
