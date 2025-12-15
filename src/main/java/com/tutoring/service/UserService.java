@@ -22,10 +22,22 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     public User registerUser(User user) {
+        // Проверка email
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new IllegalArgumentException("Email уже зарегистрирован");
         }
 
+        // Проверка username (если указан)
+        if (user.getUsername() != null && !user.getUsername().isEmpty()) {
+            if (userRepository.existsByUsername(user.getUsername())) {
+                throw new IllegalArgumentException("Username уже занят");
+            }
+        } else {
+            // Если username не указан, используем email до @ как username
+            user.setUsername(user.getEmail().split("@")[0]);
+        }
+
+        // Шифруем пароль
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRegistrationDate(LocalDateTime.now());
         user.setIsActive(true);
@@ -35,6 +47,10 @@ public class UserService {
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
 
     public Optional<User> findById(Long id) {
