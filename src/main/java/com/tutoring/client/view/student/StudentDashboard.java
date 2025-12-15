@@ -193,11 +193,50 @@ public class StudentDashboard {
             return;
         }
         
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Бронирование");
-        alert.setHeaderText("Бронирование занятия");
-        alert.setContentText("Функционал в разработке.\nИспользуйте HTTP запросы для бронирования.");
-        alert.showAndWait();
+        BookLessonDialog dialog = new BookLessonDialog(selectedTutor);
+        dialog.show().ifPresent(bookingData -> {
+            new Thread(() -> {
+                try {
+                    Map<String, Object> requestBody = new HashMap<>();
+                    requestBody.put("tutorId", selectedTutor.getId());
+                    requestBody.put("subjectId", bookingData.getSubject().getId());
+                    requestBody.put("scheduledTime", bookingData.getScheduledTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
+                    requestBody.put("durationMinutes", bookingData.getDuration());
+                    requestBody.put("notes", bookingData.getNotes());
+                    
+                    System.out.println("[DEBUG] Бронируем занятие: " + requestBody);
+                    
+                    String response = Session.getInstance().getApiClient()
+                        .post("/student/lessons/book", requestBody, String.class);
+                    
+                    System.out.println("[DEBUG] Ответ от сервера: " + response);
+                    
+                    Platform.runLater(() -> {
+                        Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                        successAlert.setTitle("Успех");
+                        successAlert.setHeaderText("Занятие забронировано!");
+                        successAlert.setContentText(
+                            "Занятие успешно забронировано.\n" +
+                            "Репетитор: " + selectedTutor.getFullName() + "\n" +
+                            "Предмет: " + bookingData.getSubject().getName() + "\n" +
+                            "Время: " + bookingData.getScheduledTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+                        );
+                        successAlert.showAndWait();
+                    });
+                    
+                } catch (Exception ex) {
+                    System.err.println("[ERROR] Ошибка при бронировании:");
+                    ex.printStackTrace();
+                    Platform.runLater(() -> {
+                        Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                        errorAlert.setTitle("Ошибка");
+                        errorAlert.setHeaderText("Ошибка бронирования");
+                        errorAlert.setContentText("Не удалось забронировать занятие.\n\n" + ex.getMessage());
+                        errorAlert.showAndWait();
+                    });
+                }
+            }).start();
+        });
     }
     
     private void showMyLessons() {
