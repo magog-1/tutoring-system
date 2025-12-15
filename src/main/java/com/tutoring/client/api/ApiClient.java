@@ -38,6 +38,13 @@ public class ApiClient {
                 throw new IOException("Ошибка: " + response.code());
             }
             String json = response.body().string();
+            
+            // Если запрашивается String.class - возвращаем сырую строку без парсинга
+            if (responseClass == String.class) {
+                return (T) json;
+            }
+            
+            // Для остальных типов - парсим
             return gson.fromJson(json, responseClass);
         }
     }
@@ -65,6 +72,12 @@ public class ApiClient {
             if (responseClass == Void.class || responseJson.isEmpty()) {
                 return null;
             }
+            
+            // Если запрашивается String.class - возвращаем сырую строку
+            if (responseClass == String.class) {
+                return (T) responseJson;
+            }
+            
             return gson.fromJson(responseJson, responseClass);
         }
     }
