@@ -1,13 +1,16 @@
 package com.tutoring.controller;
 
 import com.tutoring.model.Lesson;
+import com.tutoring.model.Review;
 import com.tutoring.model.Student;
 import com.tutoring.model.Subject;
 import com.tutoring.model.Tutor;
+import com.tutoring.repository.LessonRepository;
 import com.tutoring.repository.StudentRepository;
 import com.tutoring.repository.SubjectRepository;
 import com.tutoring.repository.TutorRepository;
 import com.tutoring.service.LessonService;
+import com.tutoring.service.ReviewService;
 import com.tutoring.service.TutorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +34,9 @@ public class StudentController {
     private LessonService lessonService;
 
     @Autowired
+    private ReviewService reviewService;
+
+    @Autowired
     private StudentRepository studentRepository;
 
     @Autowired
@@ -38,6 +44,9 @@ public class StudentController {
 
     @Autowired
     private SubjectRepository subjectRepository;
+
+    @Autowired
+    private LessonRepository lessonRepository;
 
     @GetMapping("/tutors")
     public ResponseEntity<List<Tutor>> getAllTutors() {
@@ -52,28 +61,23 @@ public class StudentController {
     @PostMapping("/lessons/book")
     public ResponseEntity<?> bookLesson(@RequestBody Map<String, Object> bookingRequest) {
         try {
-            // Получаем текущего авторизованного пользователя
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String username = authentication.getName();
 
-            // Находим студента по username
             Student student = studentRepository.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Студент не найден"));
 
-            // Извлекаем данные из запроса
             Long tutorId = Long.valueOf(bookingRequest.get("tutorId").toString());
             Long subjectId = Long.valueOf(bookingRequest.get("subjectId").toString());
             String scheduledTimeStr = bookingRequest.get("scheduledTime").toString();
             Integer durationMinutes = Integer.valueOf(bookingRequest.get("durationMinutes").toString());
             BigDecimal price = new BigDecimal(bookingRequest.get("price").toString());
 
-            // Находим репетитора и предмет
             Tutor tutor = tutorRepository.findById(tutorId)
                     .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
             Subject subject = subjectRepository.findById(subjectId)
                     .orElseThrow(() -> new IllegalArgumentException("Предмет не найден"));
 
-            // Создаём объект занятия
             Lesson lesson = new Lesson();
             lesson.setStudent(student);
             lesson.setTutor(tutor);
@@ -82,7 +86,6 @@ public class StudentController {
             lesson.setDurationMinutes(durationMinutes);
             lesson.setPrice(price);
 
-            // Бронируем занятие
             Lesson booked = lessonService.bookLesson(lesson);
             return ResponseEntity.ok(booked);
         } catch (IllegalArgumentException e) {
@@ -96,11 +99,9 @@ public class StudentController {
     @GetMapping("/lessons")
     public ResponseEntity<?> getMyLessons() {
         try {
-            // Получаем текущего авторизованного пользователя
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String username = authentication.getName();
 
-            // Находим студента
             Student student = studentRepository.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Студент не найден"));
 
@@ -111,6 +112,46 @@ public class StudentController {
         }
     }
 
+    @PostMapping("/reviews")
+    public ResponseEntity<?> createReview(@RequestBody Map<String, Object> reviewRequest) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            Student student = studentRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Студент не найден"));
+
+            Long tutorId = Long.valueOf(reviewRequest.get("tutorId").toString());
+            Integer rating = Integer.valueOf(reviewRequest.get("rating").toString());
+            String comment = reviewRequest.get("comment").toString();
+
+            Tutor tutor = tutorRepository.findById(tutorId)
+                    .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
+
+            Review review = new Review();
+            review.setStudent(student);
+            review.setTutor(tutor);
+            review.setRating(rating);
+            review.setComment(comment);
+
+            // Если указан lessonId
+            if (reviewRequest.containsKey("lessonId")) {
+                Long lessonId = Long.valueOf(reviewRequest.get("lessonId").toString());
+                Lesson lesson = lessonRepository.findById(lessonId)
+                        .orElseThrow(() -> new IllegalArgumentException("Занятие не найдено"));
+                review.setLesson(lesson);
+            }
+
+            Review created = reviewService.createReview(review);
+            return ResponseEntity.ok(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Ошибка при создании отзыва: " + e.getMessage());
+        }
+    }
+
     @DeleteMapping("/lessons/{lessonId}")
     public ResponseEntity<?> cancelLesson(@PathVariable Long lessonId) {
         try {
@@ -118,6 +159,16 @@ public class StudentController {
             return ResponseEntity.ok("Занятие отменено");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Ошибка");
+        }
+    }
+
+    @DeleteMapping("/reviews/{reviewId}")
+    public ResponseEntity<?> deleteReview(@PathVariable Long reviewId) {
+        try {
+            reviewService.deleteReview(reviewId);
+            return ResponseEntity.ok("Отзыв удалён");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Ошибка: " + e.getMessage());
         }
     }
 }
