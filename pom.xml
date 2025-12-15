@@ -60,6 +60,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Jackson Datatype Hibernate - для сериализации Hibernate прокси -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-hibernate6</artifactId>
+        </dependency>
+
         <!-- Lombok (optional) -->
         <dependency>
             <groupId>org.projectlombok</groupId>
