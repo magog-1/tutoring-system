@@ -1,7 +1,7 @@
 package com.tutoring.client.view.student;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.GsonBuilder;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.*;
 import com.tutoring.client.view.LoginView;
@@ -16,7 +16,6 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
-import java.lang.reflect.Type;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -94,7 +93,11 @@ public class StudentDashboard {
         tutorTable = new TableView<>();
         
         TableColumn<TutorDTO, String> nameCol = new TableColumn<>("Имя");
-        nameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        nameCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getFirstName() + " " + data.getValue().getLastName()
+            )
+        );
         
         TableColumn<TutorDTO, String> educationCol = new TableColumn<>("Образование");
         educationCol.setCellValueFactory(new PropertyValueFactory<>("education"));
@@ -103,7 +106,11 @@ public class StudentDashboard {
         ratingCol.setCellValueFactory(new PropertyValueFactory<>("rating"));
         
         TableColumn<TutorDTO, String> rateCol = new TableColumn<>("Цена/час");
-        rateCol.setCellValueFactory(new PropertyValueFactory<>("hourlyRate"));
+        rateCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getHourlyRate() != null ? data.getValue().getHourlyRate().toString() + " ₽" : "N/A"
+            )
+        );
         
         tutorTable.getColumns().addAll(nameCol, educationCol, ratingCol, rateCol);
         
@@ -127,9 +134,13 @@ public class StudentDashboard {
                 String response = Session.getInstance().getApiClient()
                     .get("/tutors", String.class);
                 
-                Gson gson = new Gson();
-                Type listType = new TypeToken<List<TutorDTO>>(){}.getType();
-                List<TutorDTO> tutors = gson.fromJson(response, listType);
+                Gson gson = new GsonBuilder()
+                    .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+                    .create();
+                
+                // Парсим как массив
+                TutorDTO[] tutorsArray = gson.fromJson(response, TutorDTO[].class);
+                List<TutorDTO> tutors = tutorsArray != null ? Arrays.asList(tutorsArray) : new ArrayList<>();
                 
                 Platform.runLater(() -> {
                     ObservableList<TutorDTO> data = FXCollections.observableArrayList(tutors);
@@ -210,9 +221,13 @@ public class StudentDashboard {
                 String response = Session.getInstance().getApiClient()
                     .get("/student/lessons", String.class);
                 
-                Gson gson = new Gson();
-                Type listType = new TypeToken<List<LessonDTO>>(){}.getType();
-                List<LessonDTO> lessons = gson.fromJson(response, listType);
+                Gson gson = new GsonBuilder()
+                    .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+                    .create();
+                
+                // Парсим как массив
+                LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
+                List<LessonDTO> lessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
                 
                 Platform.runLater(() -> {
                     ObservableList<LessonDTO> data = FXCollections.observableArrayList(lessons);
@@ -220,6 +235,10 @@ public class StudentDashboard {
                 });
             } catch (Exception ex) {
                 ex.printStackTrace();
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка загрузки занятий: " + ex.getMessage());
+                    alert.showAndWait();
+                });
             }
         }).start();
     }
