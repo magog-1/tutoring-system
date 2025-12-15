@@ -43,7 +43,8 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .csrf(csrf -> csrf.disable()) // Для разработки, в продакшене нужно настроить CSRF
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/subjects/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/subjects/**", "/api/tutors/**").permitAll()
+                        .requestMatchers("/api/statistics/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/manager/**").hasAnyRole("MANAGER", "ADMIN")
                         .requestMatchers("/api/tutor/**").hasAnyRole("TUTOR", "ADMIN")
