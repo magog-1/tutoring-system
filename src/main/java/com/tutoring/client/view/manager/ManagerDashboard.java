@@ -1,7 +1,7 @@
 package com.tutoring.client.view.manager;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.GsonBuilder;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.TutorDTO;
 import com.tutoring.client.view.LoginView;
@@ -16,8 +16,7 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
-import java.lang.reflect.Type;
-import java.util.List;
+import java.util.*;
 
 public class ManagerDashboard {
     private BorderPane view;
@@ -32,7 +31,6 @@ public class ManagerDashboard {
     private void createView() {
         view = new BorderPane();
         
-        // Top
         VBox topBox = new VBox(10);
         topBox.setPadding(new Insets(15));
         topBox.setStyle("-fx-background-color: #FF9800;");
@@ -47,11 +45,9 @@ public class ManagerDashboard {
         topBox.getChildren().addAll(titleLabel, logoutButton);
         view.setTop(topBox);
         
-        // Left menu
         VBox leftMenu = createMenu();
         view.setLeft(leftMenu);
         
-        // Center
         showPendingTutors();
     }
     
@@ -92,7 +88,8 @@ public class ManagerDashboard {
         TableColumn<TutorDTO, String> nameCol = new TableColumn<>("Имя");
         nameCol.setCellValueFactory(data -> 
             new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getFirstName() + " " + data.getValue().getLastName()
+                (data.getValue().getFirstName() != null ? data.getValue().getFirstName() : "") + " " + 
+                (data.getValue().getLastName() != null ? data.getValue().getLastName() : "")
             )
         );
         
@@ -121,18 +118,32 @@ public class ManagerDashboard {
     private void loadPendingTutors() {
         new Thread(() -> {
             try {
+                System.out.println("[DEBUG] Запрашиваем /manager/tutors/pending...");
                 String response = Session.getInstance().getApiClient()
                     .get("/manager/tutors/pending", String.class);
+                System.out.println("[DEBUG] Получен ответ: " + response);
                 
-                Gson gson = new Gson();
-                Type listType = new TypeToken<List<TutorDTO>>(){}.getType();
-                List<TutorDTO> tutors = gson.fromJson(response, listType);
+                if (response == null || response.trim().isEmpty()) {
+                    Platform.runLater(() -> pendingTutorsTable.setItems(FXCollections.observableArrayList()));
+                    return;
+                }
+                
+                Gson gson = new GsonBuilder()
+                    .setLenient()
+                    .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+                    .create();
+                
+                // Парсим как массив
+                TutorDTO[] tutorsArray = gson.fromJson(response, TutorDTO[].class);
+                List<TutorDTO> tutors = tutorsArray != null ? Arrays.asList(tutorsArray) : new ArrayList<>();
+                System.out.println("[DEBUG] Распарсено " + tutors.size() + " репетиторов");
                 
                 Platform.runLater(() -> {
                     ObservableList<TutorDTO> data = FXCollections.observableArrayList(tutors);
                     pendingTutorsTable.setItems(data);
                 });
             } catch (Exception ex) {
+                System.err.println("[ERROR] Ошибка при загрузке:");
                 ex.printStackTrace();
                 Platform.runLater(() -> {
                     Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка: " + ex.getMessage());
