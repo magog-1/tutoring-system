@@ -1,17 +1,29 @@
 package com.tutoring.client.view.tutor;
 
+import com.google.gson.Gson;
+import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
+import com.tutoring.client.model.LessonDTO;
 import com.tutoring.client.view.LoginView;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
 public class TutorDashboard {
     private BorderPane view;
     private Stage primaryStage;
+    private TableView<LessonDTO> lessonsTable;
     
     public TutorDashboard(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -21,7 +33,7 @@ public class TutorDashboard {
     private void createView() {
         view = new BorderPane();
         
-        // Top
+        // Top - заголовок
         VBox topBox = new VBox(10);
         topBox.setPadding(new Insets(15));
         topBox.setStyle("-fx-background-color: #4CAF50;");
@@ -36,29 +48,325 @@ public class TutorDashboard {
         Button logoutButton = new Button("Выйти");
         logoutButton.setOnAction(e -> logout());
         
-        topBox.getChildren().addAll(titleLabel, userLabel, logoutButton);
+        HBox topContent = new HBox(20);
+        topContent.getChildren().addAll(titleLabel, userLabel);
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
+        
+        topBox.getChildren().addAll(topContent, logoutButton);
         view.setTop(topBox);
         
-        // Center
-        VBox center = new VBox(20);
-        center.setPadding(new Insets(30));
-        center.setAlignment(javafx.geometry.Pos.CENTER);
+        // Left - меню
+        VBox leftMenu = createMenu();
+        view.setLeft(leftMenu);
         
-        Label infoLabel = new Label("Добро пожаловать в кабинет репетитора!");
-        infoLabel.setFont(new Font(16));
+        // Center - по умолчанию показываем занятия
+        showMyLessons();
+    }
+    
+    private VBox createMenu() {
+        VBox menu = new VBox(10);
+        menu.setPadding(new Insets(15));
+        menu.setStyle("-fx-background-color: #f5f5f5;");
+        menu.setPrefWidth(200);
         
-        Label statusLabel = new Label("Статус: Ожидает верификации");
-        statusLabel.setStyle("-fx-text-fill: orange;");
+        Button myLessonsBtn = new Button("Мои занятия");
+        myLessonsBtn.setPrefWidth(180);
+        myLessonsBtn.setOnAction(e -> showMyLessons());
         
-        Button viewLessonsBtn = new Button("Просмотреть занятия");
-        viewLessonsBtn.setPrefWidth(200);
-        viewLessonsBtn.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Функционал в разработке");
-            alert.showAndWait();
+        Button scheduleBtn = new Button("Расписание");
+        scheduleBtn.setPrefWidth(180);
+        scheduleBtn.setOnAction(e -> showSchedule());
+        
+        Button profileBtn = new Button("Мой профиль");
+        profileBtn.setPrefWidth(180);
+        profileBtn.setOnAction(e -> showProfile());
+        
+        menu.getChildren().addAll(myLessonsBtn, scheduleBtn, profileBtn);
+        return menu;
+    }
+    
+    private void showMyLessons() {
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        
+        Label titleLabel = new Label("Мои занятия");
+        titleLabel.setFont(new Font(18));
+        
+        // Фильтры
+        HBox filterBox = new HBox(10);
+        filterBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        
+        Label filterLabel = new Label("Фильтр:");
+        
+        ComboBox<String> statusFilter = new ComboBox<>();
+        statusFilter.getItems().addAll("Все", "Запланировано", "Завершено", "Отменено");
+        statusFilter.setValue("Все");
+        statusFilter.setOnAction(e -> loadMyLessons(statusFilter.getValue()));
+        
+        filterBox.getChildren().addAll(filterLabel, statusFilter);
+        
+        // Таблица занятий
+        lessonsTable = new TableView<>();
+        lessonsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        
+        TableColumn<LessonDTO, Long> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
+        idCol.setMaxWidth(60);
+        
+        TableColumn<LessonDTO, String> studentCol = new TableColumn<>("Студент");
+        studentCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getStudent() != null ? data.getValue().getStudent().getFullName() : "N/A"
+            )
+        );
+        
+        TableColumn<LessonDTO, String> subjectCol = new TableColumn<>("Предмет");
+        subjectCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getSubject() != null ? data.getValue().getSubject().getName() : "N/A"
+            )
+        );
+        
+        TableColumn<LessonDTO, String> timeCol = new TableColumn<>("Время");
+        timeCol.setCellValueFactory(data -> {
+            LocalDateTime time = data.getValue().getScheduledTime();
+            String formatted = time != null ? time.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "N/A";
+            return new javafx.beans.property.SimpleStringProperty(formatted);
         });
         
-        center.getChildren().addAll(infoLabel, statusLabel, viewLessonsBtn);
-        view.setCenter(center);
+        TableColumn<LessonDTO, String> durationCol = new TableColumn<>("Длительность");
+        durationCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getDurationMinutes() != null ? data.getValue().getDurationMinutes() + " мин" : "N/A"
+            )
+        );
+        
+        TableColumn<LessonDTO, String> statusCol = new TableColumn<>("Статус");
+        statusCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getStatus() != null ? translateStatus(data.getValue().getStatus()) : "N/A"
+            )
+        );
+        
+        TableColumn<LessonDTO, String> priceCol = new TableColumn<>("Цена");
+        priceCol.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(
+                data.getValue().getPrice() != null ? data.getValue().getPrice() + " ₽" : "N/A"
+            )
+        );
+        
+        lessonsTable.getColumns().addAll(idCol, studentCol, subjectCol, timeCol, durationCol, statusCol, priceCol);
+        
+        // Кнопки управления
+        HBox buttonBox = new HBox(10);
+        
+        Button refreshButton = new Button("Обновить");
+        refreshButton.setOnAction(e -> loadMyLessons(statusFilter.getValue()));
+        
+        Button viewDetailsButton = new Button("Подробности");
+        viewDetailsButton.setOnAction(e -> viewLessonDetails());
+        
+        Button addNotesButton = new Button("Добавить заметки");
+        addNotesButton.setOnAction(e -> addLessonNotes());
+        
+        Button completeButton = new Button("Завершить");
+        completeButton.setOnAction(e -> completeLesson());
+        
+        Button cancelButton = new Button("Отменить");
+        cancelButton.setOnAction(e -> cancelLesson());
+        
+        buttonBox.getChildren().addAll(refreshButton, viewDetailsButton, addNotesButton, completeButton, cancelButton);
+        
+        content.getChildren().addAll(titleLabel, filterBox, lessonsTable, buttonBox);
+        view.setCenter(content);
+        
+        // Загрузка данных
+        loadMyLessons("Все");
+    }
+    
+    private String translateStatus(String status) {
+        switch (status.toUpperCase()) {
+            case "SCHEDULED": return "Запланировано";
+            case "COMPLETED": return "Завершено";
+            case "CANCELLED": return "Отменено";
+            default: return status;
+        }
+    }
+    
+    private void loadMyLessons(String statusFilter) {
+        new Thread(() -> {
+            try {
+                System.out.println("[DEBUG] Запрашиваем /tutor/lessons...");
+                String response = Session.getInstance().getApiClient().get("/tutor/lessons", String.class);
+                System.out.println("[DEBUG] Получен ответ: " + response);
+                
+                if (response == null || response.trim().isEmpty()) {
+                    Platform.runLater(() -> lessonsTable.setItems(FXCollections.observableArrayList()));
+                    return;
+                }
+                
+                Gson gson = GsonProvider.getGson();
+                LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
+                List<LessonDTO> lessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
+                
+                // Фильтрация по статусу
+                if (!"Все".equals(statusFilter)) {
+                    String statusEn = statusFilter.equals("Запланировано") ? "SCHEDULED" :
+                                     statusFilter.equals("Завершено") ? "COMPLETED" : "CANCELLED";
+                    lessons = lessons.stream()
+                        .filter(l -> statusEn.equalsIgnoreCase(l.getStatus()))
+                        .toList();
+                }
+                
+                System.out.println("[DEBUG] Распарсено " + lessons.size() + " занятий");
+                
+                final List<LessonDTO> finalLessons = lessons;
+                Platform.runLater(() -> {
+                    ObservableList<LessonDTO> data = FXCollections.observableArrayList(finalLessons);
+                    lessonsTable.setItems(data);
+                });
+            } catch (Exception ex) {
+                System.err.println("[ERROR] Ошибка при загрузке занятий:");
+                ex.printStackTrace();
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка загрузки: " + ex.getMessage());
+                    alert.showAndWait();
+                });
+            }
+        }).start();
+    }
+    
+    private void viewLessonDetails() {
+        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showWarning("Выберите занятие из списка");
+            return;
+        }
+        
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Подробности занятия");
+        alert.setHeaderText("Занятие #" + selected.getId());
+        
+        StringBuilder details = new StringBuilder();
+        details.append("Студент: ").append(selected.getStudent() != null ? selected.getStudent().getFullName() : "N/A").append("\n");
+        details.append("Предмет: ").append(selected.getSubject() != null ? selected.getSubject().getName() : "N/A").append("\n");
+        details.append("Время: ").append(selected.getScheduledTime() != null ? 
+            selected.getScheduledTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "N/A").append("\n");
+        details.append("Длительность: ").append(selected.getDurationMinutes() != null ? selected.getDurationMinutes() + " мин" : "N/A").append("\n");
+        details.append("Статус: ").append(translateStatus(selected.getStatus())).append("\n");
+        details.append("Цена: ").append(selected.getPrice() != null ? selected.getPrice() + " ₽" : "N/A").append("\n\n");
+        
+        if (selected.getNotes() != null && !selected.getNotes().isEmpty()) {
+            details.append("Заметки: ").append(selected.getNotes()).append("\n");
+        }
+        if (selected.getHomework() != null && !selected.getHomework().isEmpty()) {
+            details.append("Домашнее задание: ").append(selected.getHomework());
+        }
+        
+        alert.setContentText(details.toString());
+        alert.showAndWait();
+    }
+    
+    private void addLessonNotes() {
+        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showWarning("Выберите занятие");
+            return;
+        }
+        
+        TextInputDialog dialog = new TextInputDialog(selected.getNotes() != null ? selected.getNotes() : "");
+        dialog.setTitle("Заметки к занятию");
+        dialog.setHeaderText("Занятие #" + selected.getId());
+        dialog.setContentText("Заметки:");
+        
+        dialog.showAndWait().ifPresent(notes -> {
+            // TODO: Отправить на сервер
+            showInfo("Заметки сохранены (функционал в разработке)");
+        });
+    }
+    
+    private void completeLesson() {
+        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showWarning("Выберите занятие");
+            return;
+        }
+        
+        if ("COMPLETED".equalsIgnoreCase(selected.getStatus())) {
+            showWarning("Занятие уже завершено");
+            return;
+        }
+        
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Подтверждение");
+        confirm.setHeaderText("Завершить занятие?");
+        confirm.setContentText("Занятие #" + selected.getId() + " будет отмечено как завершенное.");
+        
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                // TODO: Отправить на сервер
+                showInfo("Занятие завершено (функционал в разработке)");
+            }
+        });
+    }
+    
+    private void cancelLesson() {
+        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showWarning("Выберите занятие");
+            return;
+        }
+        
+        if ("CANCELLED".equalsIgnoreCase(selected.getStatus())) {
+            showWarning("Занятие уже отменено");
+            return;
+        }
+        
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Подтверждение");
+        confirm.setHeaderText("Отменить занятие?");
+        confirm.setContentText("Вы уверены, что хотите отменить занятие #" + selected.getId() + "?");
+        
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                // TODO: Отправить на сервер
+                showInfo("Занятие отменено (функционал в разработке)");
+            }
+        });
+    }
+    
+    private void showSchedule() {
+        Label label = new Label("Расписание - в разработке");
+        label.setFont(new Font(18));
+        VBox box = new VBox(label);
+        box.setPadding(new Insets(20));
+        box.setAlignment(javafx.geometry.Pos.CENTER);
+        view.setCenter(box);
+    }
+    
+    private void showProfile() {
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setAlignment(javafx.geometry.Pos.CENTER);
+        
+        Label titleLabel = new Label("Мой профиль");
+        titleLabel.setFont(new Font(18));
+        
+        Label infoLabel = new Label("Функционал редактирования профиля в разработке");
+        infoLabel.setStyle("-fx-text-fill: gray;");
+        
+        content.getChildren().addAll(titleLabel, infoLabel);
+        view.setCenter(content);
+    }
+    
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION, message);
+        alert.showAndWait();
+    }
+    
+    private void showWarning(String message) {
+        Alert alert = new Alert(Alert.AlertType.WARNING, message);
+        alert.showAndWait();
     }
     
     private void logout() {
