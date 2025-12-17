@@ -17,6 +17,7 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -197,12 +198,23 @@ public class StudentDashboard {
         dialog.show().ifPresent(bookingData -> {
             new Thread(() -> {
                 try {
+                    // Расчет цены на основе длительности и ставки репетитора
+                    BigDecimal hourlyRate = selectedTutor.getHourlyRate() != null ? 
+                        selectedTutor.getHourlyRate() : BigDecimal.valueOf(1000);
+                    BigDecimal price = hourlyRate.multiply(
+                        BigDecimal.valueOf(bookingData.getDuration())
+                    ).divide(BigDecimal.valueOf(60), 2, java.math.RoundingMode.HALF_UP);
+                    
                     Map<String, Object> requestBody = new HashMap<>();
                     requestBody.put("tutorId", selectedTutor.getId());
                     requestBody.put("subjectId", bookingData.getSubject().getId());
                     requestBody.put("scheduledTime", bookingData.getScheduledTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
                     requestBody.put("durationMinutes", bookingData.getDuration());
-                    requestBody.put("notes", bookingData.getNotes());
+                    requestBody.put("price", price.toString());
+                    // notes можно оставить для будущего использования
+                    if (bookingData.getNotes() != null && !bookingData.getNotes().trim().isEmpty()) {
+                        requestBody.put("notes", bookingData.getNotes());
+                    }
                     
                     System.out.println("[DEBUG] Бронируем занятие: " + requestBody);
                     
@@ -219,7 +231,9 @@ public class StudentDashboard {
                             "Занятие успешно забронировано.\n" +
                             "Репетитор: " + selectedTutor.getFullName() + "\n" +
                             "Предмет: " + bookingData.getSubject().getName() + "\n" +
-                            "Время: " + bookingData.getScheduledTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+                            "Время: " + bookingData.getScheduledTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) + "\n" +
+                            "Длительность: " + bookingData.getDuration() + " мин\n" +
+                            "Стоимость: " + price + " ₽"
                         );
                         successAlert.showAndWait();
                     });
@@ -231,7 +245,7 @@ public class StudentDashboard {
                         Alert errorAlert = new Alert(Alert.AlertType.ERROR);
                         errorAlert.setTitle("Ошибка");
                         errorAlert.setHeaderText("Ошибка бронирования");
-                        errorAlert.setContentText("Не удалось забронировать занятие.\n\n" + ex.getMessage());
+                        errorAlert.setContentText("Не удалось забронировать занятие.\n\nОшибка 500: " + ex.getMessage());
                         errorAlert.showAndWait();
                     });
                 }
