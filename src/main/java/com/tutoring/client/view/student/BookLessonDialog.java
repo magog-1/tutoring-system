@@ -1,23 +1,49 @@
 package com.tutoring.client.view.student;
 
+import com.google.gson.Gson;
+import com.tutoring.client.api.GsonProvider;
+import com.tutoring.client.api.Session;
 import com.tutoring.client.model.SubjectDTO;
 import com.tutoring.client.model.TutorDTO;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
-import javafx.util.Pair;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 public class BookLessonDialog {
     private final TutorDTO tutor;
+    private List<SubjectDTO> allSubjects;
     
     public BookLessonDialog(TutorDTO tutor) {
         this.tutor = tutor;
+        loadSubjects();
+    }
+    
+    private void loadSubjects() {
+        try {
+            System.out.println("[DEBUG] Загрузка всех предметов...");
+            String response = Session.getInstance().getApiClient().get("/subjects", String.class);
+            
+            if (response != null && !response.trim().isEmpty()) {
+                Gson gson = GsonProvider.getGson();
+                SubjectDTO[] subjectsArray = gson.fromJson(response, SubjectDTO[].class);
+                allSubjects = subjectsArray != null ? Arrays.asList(subjectsArray) : new ArrayList<>();
+                System.out.println("[DEBUG] Загружено " + allSubjects.size() + " предметов");
+            } else {
+                allSubjects = new ArrayList<>();
+            }
+        } catch (Exception ex) {
+            System.err.println("[ERROR] Ошибка загрузки предметов: " + ex.getMessage());
+            ex.printStackTrace();
+            allSubjects = new ArrayList<>();
+        }
     }
     
     public Optional<BookingData> show() {
@@ -33,11 +59,11 @@ public class BookLessonDialog {
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
         
-        // Предмет
+        // Предмет - используем все доступные предметы
         ComboBox<SubjectDTO> subjectCombo = new ComboBox<>();
-        if (tutor.getSubjects() != null && !tutor.getSubjects().isEmpty()) {
-            subjectCombo.getItems().addAll(tutor.getSubjects());
-            subjectCombo.setValue(tutor.getSubjects().get(0));
+        if (allSubjects != null && !allSubjects.isEmpty()) {
+            subjectCombo.getItems().addAll(allSubjects);
+            subjectCombo.setValue(allSubjects.get(0));
             subjectCombo.setConverter(new javafx.util.StringConverter<SubjectDTO>() {
                 @Override
                 public String toString(SubjectDTO subject) {
@@ -50,6 +76,7 @@ public class BookLessonDialog {
             });
         } else {
             subjectCombo.setPromptText("Нет доступных предметов");
+            subjectCombo.setDisable(true);
         }
         
         // Дата
@@ -87,27 +114,37 @@ public class BookLessonDialog {
             priceLabel.setText("Примерная стоимость: " + tutor.getHourlyRate() + " ₽/час");
         }
         
-        grid.add(new Label("Предмет:"), 0, 0);
-        grid.add(subjectCombo, 1, 0);
-        grid.add(new Label("Дата:"), 0, 1);
-        grid.add(datePicker, 1, 1);
-        grid.add(new Label("Время:"), 0, 2);
+        // Инфо о репетиторе
+        Label tutorInfoLabel = new Label();
+        if (tutor.getEducation() != null && !tutor.getEducation().isEmpty()) {
+            tutorInfoLabel.setText("Образование: " + tutor.getEducation());
+        }
+        
+        grid.add(new Label("Репетитор:"), 0, 0);
+        grid.add(new Label(tutor.getFirstName() + " " + tutor.getLastName()), 1, 0);
+        grid.add(tutorInfoLabel, 1, 0);
+        
+        grid.add(new Label("Предмет:"), 0, 1);
+        grid.add(subjectCombo, 1, 1);
+        grid.add(new Label("Дата:"), 0, 2);
+        grid.add(datePicker, 1, 2);
+        grid.add(new Label("Время:"), 0, 3);
         
         javafx.scene.layout.HBox timeBox = new javafx.scene.layout.HBox(5);
         timeBox.getChildren().addAll(hourSpinner, new Label(":"), minuteSpinner);
-        grid.add(timeBox, 1, 2);
+        grid.add(timeBox, 1, 3);
         
-        grid.add(new Label("Продолжительность:"), 0, 3);
-        grid.add(durationCombo, 1, 3);
-        grid.add(new Label("Примечания:"), 0, 4);
-        grid.add(notesArea, 1, 4);
-        grid.add(priceLabel, 1, 5);
+        grid.add(new Label("Продолжительность:"), 0, 4);
+        grid.add(durationCombo, 1, 4);
+        grid.add(new Label("Примечания:"), 0, 5);
+        grid.add(notesArea, 1, 5);
+        grid.add(priceLabel, 1, 6);
         
         dialog.getDialogPane().setContent(grid);
         
-        // Валидация
+        // Валидация - делаем кнопку неактивной, если нет предметов
         javafx.scene.Node bookButton = dialog.getDialogPane().lookupButton(bookButtonType);
-        bookButton.setDisable(tutor.getSubjects() == null || tutor.getSubjects().isEmpty());
+        bookButton.setDisable(allSubjects == null || allSubjects.isEmpty());
         
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == bookButtonType) {
