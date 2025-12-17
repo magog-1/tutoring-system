@@ -10,11 +10,13 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
 import java.math.BigDecimal;
@@ -77,7 +79,11 @@ public class StudentDashboard {
         myLessonsBtn.setPrefWidth(180);
         myLessonsBtn.setOnAction(e -> showMyLessons());
         
-        menu.getChildren().addAll(searchTutorsBtn, myLessonsBtn);
+        Button profileBtn = new Button("Мой профиль");
+        profileBtn.setPrefWidth(180);
+        profileBtn.setOnAction(e -> showProfile());
+        
+        menu.getChildren().addAll(searchTutorsBtn, myLessonsBtn, profileBtn);
         return menu;
     }
     
@@ -333,6 +339,111 @@ public class StudentDashboard {
                 });
             }
         }).start();
+    }
+    
+    private void showProfile() {
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(30));
+        content.setAlignment(Pos.TOP_CENTER);
+        content.setStyle("-fx-background-color: #f9f9f9;");
+        
+        // Заголовок
+        Label titleLabel = new Label("Мой профиль");
+        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+        titleLabel.setStyle("-fx-text-fill: #2196F3;");
+        
+        // Карточка профиля
+        VBox profileCard = new VBox(15);
+        profileCard.setPadding(new Insets(25));
+        profileCard.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);");
+        profileCard.setMaxWidth(600);
+        
+        UserDTO user = Session.getInstance().getCurrentUser();
+        
+        // Полное имя
+        Label nameLabel = new Label(user.getFullName());
+        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
+        
+        // Роль
+        Label roleLabel = new Label("Роль: Студент");
+        roleLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;");
+        
+        Separator separator1 = new Separator();
+        
+        // Информация
+        GridPane infoGrid = new GridPane();
+        infoGrid.setHgap(15);
+        infoGrid.setVgap(12);
+        infoGrid.setPadding(new Insets(10, 0, 0, 0));
+        
+        int row = 0;
+        
+        // Username
+        addInfoRow(infoGrid, row++, "Имя пользователя:", user.getUsername());
+        
+        // Email
+        addInfoRow(infoGrid, row++, "Email:", user.getEmail());
+        
+        // Телефон
+        if (user.getPhoneNumber() != null && !user.getPhoneNumber().isEmpty()) {
+            addInfoRow(infoGrid, row++, "Телефон:", user.getPhoneNumber());
+        }
+        
+        // Имя
+        addInfoRow(infoGrid, row++, "Имя:", user.getFirstName());
+        
+        // Фамилия
+        addInfoRow(infoGrid, row++, "Фамилия:", user.getLastName());
+        
+        profileCard.getChildren().addAll(nameLabel, roleLabel, separator1, infoGrid);
+        
+        // Кнопки действий
+        HBox buttonBox = new HBox(15);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setPadding(new Insets(20, 0, 0, 0));
+        
+        Button editButton = new Button("Редактировать профиль");
+        editButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
+        editButton.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Информация");
+            alert.setHeaderText("Функционал в разработке");
+            alert.setContentText("Редактирование профиля будет добавлено в следующей версии.");
+            alert.showAndWait();
+        });
+        
+        Button changePasswordButton = new Button("Изменить пароль");
+        changePasswordButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
+        changePasswordButton.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Информация");
+            alert.setHeaderText("Функционал в разработке");
+            alert.setContentText("Изменение пароля будет добавлено в следующей версии.");
+            alert.showAndWait();
+        });
+        
+        buttonBox.getChildren().addAll(editButton, changePasswordButton);
+        
+        content.getChildren().addAll(titleLabel, profileCard, buttonBox);
+        
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: #f9f9f9;");
+        
+        view.setCenter(scrollPane);
+    }
+    
+    private void addInfoRow(GridPane grid, int row, String label, String value) {
+        Label labelNode = new Label(label);
+        labelNode.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
+        
+        Label valueNode = new Label(value != null ? value : "N/A");
+        valueNode.setStyle("-fx-text-fill: #333;");
+        valueNode.setWrapText(true);
+        valueNode.setMaxWidth(350);
+        
+        grid.add(labelNode, 0, row);
+        grid.add(valueNode, 1, row);
     }
     
     private void logout() {
