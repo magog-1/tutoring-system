@@ -8,6 +8,7 @@ import com.tutoring.client.model.TutorDTO;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -59,7 +60,29 @@ public class BookLessonDialog {
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
         
-        // Предмет - используем все доступные предметы
+        int row = 0;
+        
+        // Информация о репетиторе
+        Label tutorNameLabel = new Label("Репетитор:");
+        Label tutorNameValue = new Label(tutor.getFirstName() + " " + tutor.getLastName());
+        tutorNameValue.setStyle("-fx-font-weight: bold;");
+        grid.add(tutorNameLabel, 0, row);
+        grid.add(tutorNameValue, 1, row);
+        row++;
+        
+        // Образование (если есть)
+        if (tutor.getEducation() != null && !tutor.getEducation().isEmpty()) {
+            Label educationLabel = new Label("Образование:");
+            Label educationValue = new Label(tutor.getEducation());
+            educationValue.setStyle("-fx-text-fill: gray; -fx-font-size: 11px;");
+            educationValue.setWrapText(true);
+            educationValue.setMaxWidth(300);
+            grid.add(educationLabel, 0, row);
+            grid.add(educationValue, 1, row);
+            row++;
+        }
+        
+        // Предмет
         ComboBox<SubjectDTO> subjectCombo = new ComboBox<>();
         if (allSubjects != null && !allSubjects.isEmpty()) {
             subjectCombo.getItems().addAll(allSubjects);
@@ -79,14 +102,29 @@ public class BookLessonDialog {
             subjectCombo.setDisable(true);
         }
         
+        grid.add(new Label("Предмет:"), 0, row);
+        grid.add(subjectCombo, 1, row);
+        row++;
+        
         // Дата
         DatePicker datePicker = new DatePicker();
         datePicker.setValue(LocalDate.now().plusDays(1));
         datePicker.setPromptText("Выберите дату");
         
+        grid.add(new Label("Дата:"), 0, row);
+        grid.add(datePicker, 1, row);
+        row++;
+        
         // Время
         Spinner<Integer> hourSpinner = new Spinner<>(8, 20, 10);
         Spinner<Integer> minuteSpinner = new Spinner<>(0, 45, 0, 15);
+        
+        javafx.scene.layout.HBox timeBox = new javafx.scene.layout.HBox(5);
+        timeBox.getChildren().addAll(hourSpinner, new Label(":"), minuteSpinner);
+        
+        grid.add(new Label("Время:"), 0, row);
+        grid.add(timeBox, 1, row);
+        row++;
         
         // Продолжительность
         ComboBox<Integer> durationCombo = new ComboBox<>();
@@ -103,46 +141,32 @@ public class BookLessonDialog {
             }
         });
         
+        grid.add(new Label("Продолжительность:"), 0, row);
+        grid.add(durationCombo, 1, row);
+        row++;
+        
         // Примечания
         TextArea notesArea = new TextArea();
         notesArea.setPromptText("Дополнительные пожелания...");
         notesArea.setPrefRowCount(3);
+        notesArea.setMaxWidth(300);
+        
+        grid.add(new Label("Примечания:"), 0, row);
+        grid.add(notesArea, 1, row);
+        row++;
         
         // Цена
         Label priceLabel = new Label();
         if (tutor.getHourlyRate() != null) {
             priceLabel.setText("Примерная стоимость: " + tutor.getHourlyRate() + " ₽/час");
+            priceLabel.setStyle("-fx-text-fill: #2196F3; -fx-font-weight: bold;");
         }
-        
-        // Инфо о репетиторе
-        Label tutorInfoLabel = new Label();
-        if (tutor.getEducation() != null && !tutor.getEducation().isEmpty()) {
-            tutorInfoLabel.setText("Образование: " + tutor.getEducation());
-        }
-        
-        grid.add(new Label("Репетитор:"), 0, 0);
-        grid.add(new Label(tutor.getFirstName() + " " + tutor.getLastName()), 1, 0);
-        grid.add(tutorInfoLabel, 1, 0);
-        
-        grid.add(new Label("Предмет:"), 0, 1);
-        grid.add(subjectCombo, 1, 1);
-        grid.add(new Label("Дата:"), 0, 2);
-        grid.add(datePicker, 1, 2);
-        grid.add(new Label("Время:"), 0, 3);
-        
-        javafx.scene.layout.HBox timeBox = new javafx.scene.layout.HBox(5);
-        timeBox.getChildren().addAll(hourSpinner, new Label(":"), minuteSpinner);
-        grid.add(timeBox, 1, 3);
-        
-        grid.add(new Label("Продолжительность:"), 0, 4);
-        grid.add(durationCombo, 1, 4);
-        grid.add(new Label("Примечания:"), 0, 5);
-        grid.add(notesArea, 1, 5);
-        grid.add(priceLabel, 1, 6);
+        grid.add(priceLabel, 1, row);
+        row++;
         
         dialog.getDialogPane().setContent(grid);
         
-        // Валидация - делаем кнопку неактивной, если нет предметов
+        // Валидация
         javafx.scene.Node bookButton = dialog.getDialogPane().lookupButton(bookButtonType);
         bookButton.setDisable(allSubjects == null || allSubjects.isEmpty());
         
