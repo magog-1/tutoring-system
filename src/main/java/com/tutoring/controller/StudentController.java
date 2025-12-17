@@ -106,6 +106,13 @@ public class StudentController {
                     .orElseThrow(() -> new IllegalArgumentException("Студент не найден"));
 
             List<Lesson> lessons = lessonService.getStudentLessons(student);
+            
+            // Явно загружаем LAZY ассоциации для сериализации
+            lessons.forEach(lesson -> {
+                lesson.getTutor().getFirstName(); // триггер для загрузки
+                lesson.getSubject().getName();
+            });
+            
             return ResponseEntity.ok(lessons);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Ошибка: " + e.getMessage());
