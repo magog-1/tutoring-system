@@ -35,6 +35,13 @@ public class TutorController {
                     .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
 
             List<Lesson> lessons = lessonService.getTutorLessons(tutor);
+            
+            // Явно загружаем LAZY ассоциации для сериализации
+            lessons.forEach(lesson -> {
+                lesson.getStudent().getFirstName(); // триггер для загрузки Student
+                lesson.getSubject().getName();      // триггер для загрузки Subject
+            });
+            
             return ResponseEntity.ok(lessons);
         } catch (Exception e) {
             e.printStackTrace();
