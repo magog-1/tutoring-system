@@ -84,7 +84,12 @@ public class StudentController {
                 student.setPhoneNumber(updates.get("phoneNumber"));
             }
             if (updates.containsKey("educationLevel")) {
-                student.setEducationLevel(updates.get("educationLevel"));
+                try {
+                    Student.EducationLevel level = Student.EducationLevel.valueOf(updates.get("educationLevel"));
+                    student.setEducationLevel(level);
+                } catch (IllegalArgumentException e) {
+                    // Игнорируем неверное значение
+                }
             }
             if (updates.containsKey("learningGoals")) {
                 student.setLearningGoals(updates.get("learningGoals"));
