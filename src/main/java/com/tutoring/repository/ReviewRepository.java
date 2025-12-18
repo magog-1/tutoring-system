@@ -16,6 +16,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     List<Review> findByStudent(Student student);
 
+    // Метод для получения отзывов по ID репетитора
+    @Query("SELECT r FROM Review r WHERE r.tutor.id = :tutorId")
+    List<Review> findByTutorId(@Param("tutorId") Long tutorId);
+
     @Query("SELECT r FROM Review r WHERE r.tutor.id = :tutorId ORDER BY r.createdAt DESC")
     List<Review> findByTutorIdOrderByDateDesc(@Param("tutorId") Long tutorId);
 
