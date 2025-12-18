@@ -332,12 +332,9 @@ public class TutorDashboard {
         dialog.showAndWait().ifPresent(data -> {
             new Thread(() -> {
                 try {
-                    // Отправляем запрос на завершение
-                    Gson gson = GsonProvider.getGson();
-                    String jsonBody = gson.toJson(data);
-                    
+                    // Передаем Map напрямую - ApiClient сам сериализует в JSON
                     Session.getInstance().getApiClient()
-                        .put("/tutor/lessons/" + selected.getId() + "/complete", jsonBody);
+                        .put("/tutor/lessons/" + selected.getId() + "/complete", data);
                     
                     Platform.runLater(() -> {
                         showInfo("Занятие успешно завершено!");
