@@ -1,15 +1,18 @@
 package com.tutoring.controller;
 
 import com.tutoring.model.Lesson;
+import com.tutoring.model.Review;
 import com.tutoring.model.Tutor;
 import com.tutoring.repository.TutorRepository;
 import com.tutoring.service.LessonService;
+import com.tutoring.service.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +25,9 @@ public class TutorController {
 
     @Autowired
     private TutorRepository tutorRepository;
+
+    @Autowired
+    private ReviewService reviewService;
 
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile() {
@@ -41,6 +47,71 @@ public class TutorController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Ошибка: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> updates) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            Tutor tutor = tutorRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
+
+            // Обновляем основные поля
+            if (updates.containsKey("firstName")) {
+                tutor.setFirstName(updates.get("firstName"));
+            }
+            if (updates.containsKey("lastName")) {
+                tutor.setLastName(updates.get("lastName"));
+            }
+            if (updates.containsKey("phoneNumber")) {
+                tutor.setPhoneNumber(updates.get("phoneNumber"));
+            }
+            if (updates.containsKey("education")) {
+                tutor.setEducation(updates.get("education"));
+            }
+            if (updates.containsKey("experienceYears")) {
+                tutor.setExperienceYears(Integer.parseInt(updates.get("experienceYears")));
+            }
+            if (updates.containsKey("hourlyRate")) {
+                tutor.setHourlyRate(new BigDecimal(updates.get("hourlyRate")));
+            }
+            if (updates.containsKey("bio")) {
+                tutor.setBio(updates.get("bio"));
+            }
+
+            Tutor updated = tutorRepository.save(tutor);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Ошибка обновления профиля: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/reviews")
+    public ResponseEntity<?> getMyReviews() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            Tutor tutor = tutorRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
+
+            List<Review> reviews = reviewService.getReviewsByTutor(tutor.getId());
+            
+            // Загружаем связанные данные
+            reviews.forEach(review -> {
+                if (review.getStudent() != null) {
+                    review.getStudent().getFirstName();
+                }
+            });
+
+            return ResponseEntity.ok(reviews);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Ошибка загрузки отзывов: " + e.getMessage());
         }
     }
 

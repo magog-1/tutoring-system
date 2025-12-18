@@ -64,6 +64,40 @@ public class StudentController {
         }
     }
 
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> updates) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            Student student = studentRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Студент не найден"));
+
+            // Обновляем основные поля
+            if (updates.containsKey("firstName")) {
+                student.setFirstName(updates.get("firstName"));
+            }
+            if (updates.containsKey("lastName")) {
+                student.setLastName(updates.get("lastName"));
+            }
+            if (updates.containsKey("phoneNumber")) {
+                student.setPhoneNumber(updates.get("phoneNumber"));
+            }
+            if (updates.containsKey("educationLevel")) {
+                student.setEducationLevel(updates.get("educationLevel"));
+            }
+            if (updates.containsKey("learningGoals")) {
+                student.setLearningGoals(updates.get("learningGoals"));
+            }
+
+            Student updated = studentRepository.save(student);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Ошибка обновления профиля: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/tutors")
     public ResponseEntity<List<Tutor>> getAllTutors() {
         try {
