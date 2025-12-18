@@ -105,6 +105,8 @@ public class LoginView {
     }
     
     private void openDashboard(String role) {
+        primaryStage.setMaximized(true);
+        
         Scene scene;
         switch (role) {
             case "STUDENT":
