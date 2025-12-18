@@ -39,6 +39,14 @@ public class LessonService {
         lessonRepository.save(lesson);
     }
 
+    public void cancelLesson(Long lessonId) {
+        Lesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new IllegalArgumentException("Занятие не найдено"));
+
+        lesson.setStatus(Lesson.LessonStatus.CANCELLED);
+        lessonRepository.save(lesson);
+    }
+
     public void completeLesson(Long lessonId, String notes, String homework) {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new IllegalArgumentException("Занятие не найдено"));
