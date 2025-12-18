@@ -48,6 +48,22 @@ public class StudentController {
     @Autowired
     private LessonRepository lessonRepository;
 
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            Student student = studentRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Студент не найден"));
+
+            return ResponseEntity.ok(student);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Ошибка: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/tutors")
     public ResponseEntity<List<Tutor>> getAllTutors() {
         try {
