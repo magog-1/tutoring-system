@@ -82,6 +82,18 @@ public class TutorController {
         }
     }
 
+    @PutMapping("/lessons/{lessonId}/cancel")
+    public ResponseEntity<?> cancelLesson(@PathVariable Long lessonId) {
+        try {
+            lessonService.cancelLesson(lessonId);
+            return ResponseEntity.ok("Занятие отклонено");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Ошибка при отклонении");
+        }
+    }
+
     @PutMapping("/lessons/{lessonId}/complete")
     public ResponseEntity<?> completeLesson(
             @PathVariable Long lessonId,
