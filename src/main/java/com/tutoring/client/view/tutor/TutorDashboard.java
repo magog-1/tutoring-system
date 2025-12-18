@@ -1,6 +1,8 @@
 package com.tutoring.client.view.tutor;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.LessonDTO;
@@ -9,11 +11,13 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
 import java.time.LocalDateTime;
@@ -349,18 +353,258 @@ public class TutorDashboard {
     }
     
     private void showProfile() {
-        VBox content = new VBox(15);
-        content.setPadding(new Insets(20));
-        content.setAlignment(javafx.geometry.Pos.CENTER);
+        // Показываем загрузчик
+        VBox loadingBox = new VBox(20);
+        loadingBox.setAlignment(Pos.CENTER);
+        loadingBox.setPadding(new Insets(50));
+        Label loadingLabel = new Label("Загрузка профиля...");
+        loadingLabel.setFont(new Font(16));
+        ProgressIndicator progress = new ProgressIndicator();
+        loadingBox.getChildren().addAll(progress, loadingLabel);
+        view.setCenter(loadingBox);
         
+        // Загружаем данные профиля с сервера
+        new Thread(() -> {
+            try {
+                String response = Session.getInstance().getApiClient().get("/tutor/profile", String.class);
+                Gson gson = GsonProvider.getGson();
+                JsonObject profileData = gson.fromJson(response, JsonObject.class);
+                
+                Platform.runLater(() -> displayProfile(profileData));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Ошибка");
+                    alert.setHeaderText("Ошибка загрузки профиля");
+                    alert.setContentText("Не удалось загрузить данные профиля: " + ex.getMessage());
+                    alert.showAndWait();
+                });
+            }
+        }).start();
+    }
+    
+    private void displayProfile(JsonObject profileData) {
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(30));
+        content.setAlignment(Pos.TOP_CENTER);
+        content.setStyle("-fx-background-color: #f9f9f9;");
+        
+        // Заголовок
         Label titleLabel = new Label("Мой профиль");
-        titleLabel.setFont(new Font(18));
+        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+        titleLabel.setStyle("-fx-text-fill: #4CAF50;");
         
-        Label infoLabel = new Label("Функционал редактирования профиля в разработке");
-        infoLabel.setStyle("-fx-text-fill: gray;");
+        // Карточка профиля
+        VBox profileCard = new VBox(15);
+        profileCard.setPadding(new Insets(25));
+        profileCard.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);");
+        profileCard.setMaxWidth(700);
         
-        content.getChildren().addAll(titleLabel, infoLabel);
-        view.setCenter(content);
+        String firstName = getJsonString(profileData, "firstName");
+        String lastName = getJsonString(profileData, "lastName");
+        String fullName = firstName + " " + lastName;
+        
+        // Полное имя
+        Label nameLabel = new Label(fullName);
+        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
+        
+        // Роль и статус
+        HBox roleBox = new HBox(15);
+        roleBox.setAlignment(Pos.CENTER_LEFT);
+        
+        Label roleLabel = new Label("Роль: Репетитор");
+        roleLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;");
+        
+        boolean isVerified = profileData.has("isVerified") && profileData.get("isVerified").getAsBoolean();
+        if (isVerified) {
+            Label verifiedLabel = new Label("✓ Подтвержден");
+            verifiedLabel.setStyle("-fx-text-fill: #2196F3; -fx-font-size: 12px; -fx-font-weight: bold; -fx-background-color: #E3F2FD; -fx-padding: 3 8; -fx-background-radius: 3;");
+            roleBox.getChildren().addAll(roleLabel, verifiedLabel);
+        } else {
+            roleBox.getChildren().add(roleLabel);
+        }
+        
+        // Рейтинг
+        if (profileData.has("rating") && !profileData.get("rating").isJsonNull()) {
+            double rating = profileData.get("rating").getAsDouble();
+            int totalReviews = profileData.has("totalReviews") ? profileData.get("totalReviews").getAsInt() : 0;
+            Label ratingLabel = new Label(String.format("★ %.1f (%d %s)", rating, totalReviews, 
+                totalReviews == 1 ? "отзыв" : "отзывов"));
+            ratingLabel.setStyle("-fx-text-fill: #FF9800; -fx-font-size: 14px; -fx-font-weight: bold;");
+            roleBox.getChildren().add(ratingLabel);
+        }
+        
+        Separator separator1 = new Separator();
+        
+        // Основная информация
+        Label basicInfoHeader = new Label("Основная информация");
+        basicInfoHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
+        basicInfoHeader.setStyle("-fx-text-fill: #333;");
+        
+        GridPane infoGrid = new GridPane();
+        infoGrid.setHgap(15);
+        infoGrid.setVgap(12);
+        infoGrid.setPadding(new Insets(10, 0, 0, 0));
+        
+        int row = 0;
+        
+        // Username
+        addInfoRow(infoGrid, row++, "Имя пользователя:", getJsonString(profileData, "username"));
+        
+        // Email
+        addInfoRow(infoGrid, row++, "Email:", getJsonString(profileData, "email"));
+        
+        // Телефон
+        String phone = getJsonString(profileData, "phoneNumber");
+        if (phone != null && !phone.isEmpty() && !phone.equals("N/A")) {
+            addInfoRow(infoGrid, row++, "Телефон:", phone);
+        }
+        
+        // Имя
+        addInfoRow(infoGrid, row++, "Имя:", firstName);
+        
+        // Фамилия
+        addInfoRow(infoGrid, row++, "Фамилия:", lastName);
+        
+        profileCard.getChildren().addAll(nameLabel, roleBox, separator1, basicInfoHeader, infoGrid);
+        
+        // Профессиональная информация
+        Separator separator2 = new Separator();
+        profileCard.getChildren().add(separator2);
+        
+        Label professionalInfoHeader = new Label("Профессиональная информация");
+        professionalInfoHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
+        professionalInfoHeader.setStyle("-fx-text-fill: #333;");
+        profileCard.getChildren().add(professionalInfoHeader);
+        
+        GridPane professionalGrid = new GridPane();
+        professionalGrid.setHgap(15);
+        professionalGrid.setVgap(12);
+        professionalGrid.setPadding(new Insets(10, 0, 0, 0));
+        
+        int pRow = 0;
+        
+        // Образование
+        String education = getJsonString(profileData, "education");
+        if (education != null && !education.equals("N/A")) {
+            addInfoRow(professionalGrid, pRow++, "Образование:", education);
+        }
+        
+        // Опыт работы
+        if (profileData.has("experienceYears") && !profileData.get("experienceYears").isJsonNull()) {
+            int experience = profileData.get("experienceYears").getAsInt();
+            addInfoRow(professionalGrid, pRow++, "Опыт работы:", experience + " " + getYearsWord(experience));
+        }
+        
+        // Ставка
+        if (profileData.has("hourlyRate") && !profileData.get("hourlyRate").isJsonNull()) {
+            String rate = profileData.get("hourlyRate").getAsString();
+            addInfoRow(professionalGrid, pRow++, "Ставка:", rate + " ₽/час");
+        }
+        
+        // Предметы
+        if (profileData.has("subjects") && profileData.get("subjects").isJsonArray()) {
+            JsonArray subjects = profileData.getAsJsonArray("subjects");
+            if (subjects.size() > 0) {
+                StringBuilder subjectsList = new StringBuilder();
+                for (int i = 0; i < subjects.size(); i++) {
+                    JsonObject subject = subjects.get(i).getAsJsonObject();
+                    if (subject.has("name")) {
+                        if (i > 0) subjectsList.append(", ");
+                        subjectsList.append(subject.get("name").getAsString());
+                    }
+                }
+                if (subjectsList.length() > 0) {
+                    addInfoRow(professionalGrid, pRow++, "Предметы:", subjectsList.toString());
+                }
+            }
+        }
+        
+        profileCard.getChildren().add(professionalGrid);
+        
+        // О себе
+        String bio = getJsonString(profileData, "bio");
+        if (bio != null && !bio.equals("N/A") && !bio.isEmpty()) {
+            Separator separator3 = new Separator();
+            profileCard.getChildren().add(separator3);
+            
+            Label bioHeader = new Label("О себе");
+            bioHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
+            bioHeader.setStyle("-fx-text-fill: #333;");
+            
+            Label bioText = new Label(bio);
+            bioText.setWrapText(true);
+            bioText.setMaxWidth(650);
+            bioText.setStyle("-fx-text-fill: #555; -fx-padding: 10 0 0 0;");
+            
+            profileCard.getChildren().addAll(bioHeader, bioText);
+        }
+        
+        // Кнопки действий
+        HBox buttonBox = new HBox(15);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setPadding(new Insets(20, 0, 0, 0));
+        
+        Button editButton = new Button("Редактировать профиль");
+        editButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
+        editButton.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Информация");
+            alert.setHeaderText("Функционал в разработке");
+            alert.setContentText("Редактирование профиля будет добавлено в следующей версии.");
+            alert.showAndWait();
+        });
+        
+        Button changePasswordButton = new Button("Изменить пароль");
+        changePasswordButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
+        changePasswordButton.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Информация");
+            alert.setHeaderText("Функционал в разработке");
+            alert.setContentText("Изменение пароля будет добавлено в следующей версии.");
+            alert.showAndWait();
+        });
+        
+        buttonBox.getChildren().addAll(editButton, changePasswordButton);
+        
+        content.getChildren().addAll(titleLabel, profileCard, buttonBox);
+        
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: #f9f9f9;");
+        
+        view.setCenter(scrollPane);
+    }
+    
+    private String getJsonString(JsonObject json, String key) {
+        if (json.has(key) && !json.get(key).isJsonNull()) {
+            return json.get(key).getAsString();
+        }
+        return "N/A";
+    }
+    
+    private String getYearsWord(int years) {
+        if (years % 10 == 1 && years % 100 != 11) {
+            return "год";
+        } else if (years % 10 >= 2 && years % 10 <= 4 && (years % 100 < 10 || years % 100 >= 20)) {
+            return "года";
+        } else {
+            return "лет";
+        }
+    }
+    
+    private void addInfoRow(GridPane grid, int row, String label, String value) {
+        Label labelNode = new Label(label);
+        labelNode.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
+        
+        Label valueNode = new Label(value != null ? value : "N/A");
+        valueNode.setStyle("-fx-text-fill: #333;");
+        valueNode.setWrapText(true);
+        valueNode.setMaxWidth(450);
+        
+        grid.add(labelNode, 0, row);
+        grid.add(valueNode, 1, row);
     }
     
     private void showInfo(String message) {
