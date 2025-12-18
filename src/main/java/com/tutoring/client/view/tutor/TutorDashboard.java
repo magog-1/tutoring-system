@@ -20,15 +20,22 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class TutorDashboard {
     private BorderPane view;
     private Stage primaryStage;
     private TableView<LessonDTO> lessonsTable;
     private ComboBox<String> statusFilter;
+    private List<LessonDTO> allLessons = new ArrayList<>();
+    private LocalDate selectedDate = LocalDate.now();
+    private YearMonth currentYearMonth = YearMonth.now();
     
     public TutorDashboard(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -185,6 +192,8 @@ public class TutorDashboard {
     
     private String translateStatus(String status) {
         switch (status.toUpperCase()) {
+            case "PENDING": return "Ожидает";
+            case "CONFIRMED": return "Подтверждено";
             case "SCHEDULED": return "Запланировано";
             case "COMPLETED": return "Завершено";
             case "CANCELLED": return "Отменено";
@@ -207,6 +216,8 @@ public class TutorDashboard {
                 Gson gson = GsonProvider.getGson();
                 LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
                 List<LessonDTO> lessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
+                
+                allLessons = new ArrayList<>(lessons); // Сохраняем для календаря
                 
                 // Фильтрация по статусу
                 if (!"Все".equals(statusFilter)) {
@@ -344,12 +355,272 @@ public class TutorDashboard {
     }
     
     private void showSchedule() {
-        Label label = new Label("Расписание - в разработке");
-        label.setFont(new Font(18));
-        VBox box = new VBox(label);
-        box.setPadding(new Insets(20));
-        box.setAlignment(javafx.geometry.Pos.CENTER);
-        view.setCenter(box);
+        // Загружаем занятия, если еще не загружены
+        if (allLessons.isEmpty()) {
+            new Thread(() -> {
+                try {
+                    String response = Session.getInstance().getApiClient().get("/tutor/lessons", String.class);
+                    if (response != null && !response.trim().isEmpty()) {
+                        Gson gson = GsonProvider.getGson();
+                        LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
+                        allLessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
+                        Platform.runLater(this::displaySchedule);
+                    } else {
+                        Platform.runLater(this::displaySchedule);
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Platform.runLater(this::displaySchedule);
+                }
+            }).start();
+        } else {
+            displaySchedule();
+        }
+    }
+    
+    private void displaySchedule() {
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setStyle("-fx-background-color: #f9f9f9;");
+        
+        // Заголовок
+        Label titleLabel = new Label("Расписание занятий");
+        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
+        titleLabel.setStyle("-fx-text-fill: #4CAF50;");
+        
+        // Навигация по месяцам
+        HBox navigationBox = new HBox(15);
+        navigationBox.setAlignment(Pos.CENTER);
+        navigationBox.setPadding(new Insets(10));
+        
+        Button prevMonthBtn = new Button("◄ Предыдущий");
+        prevMonthBtn.setOnAction(e -> {
+            currentYearMonth = currentYearMonth.minusMonths(1);
+            displaySchedule();
+        });
+        
+        Label monthLabel = new Label(currentYearMonth.getMonth().getDisplayName(TextStyle.FULL_STANDALONE, new Locale("ru")) + " " + currentYearMonth.getYear());
+        monthLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        monthLabel.setStyle("-fx-text-fill: #333;");
+        monthLabel.setPrefWidth(200);
+        monthLabel.setAlignment(Pos.CENTER);
+        
+        Button nextMonthBtn = new Button("Следующий ►");
+        nextMonthBtn.setOnAction(e -> {
+            currentYearMonth = currentYearMonth.plusMonths(1);
+            displaySchedule();
+        });
+        
+        Button todayBtn = new Button("Сегодня");
+        todayBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        todayBtn.setOnAction(e -> {
+            currentYearMonth = YearMonth.now();
+            selectedDate = LocalDate.now();
+            displaySchedule();
+        });
+        
+        navigationBox.getChildren().addAll(prevMonthBtn, monthLabel, nextMonthBtn, todayBtn);
+        
+        // Календарная сетка
+        GridPane calendar = createCalendarGrid();
+        
+        // Информация о выбранном дне
+        VBox dayInfoBox = createDayInfoBox();
+        
+        content.getChildren().addAll(titleLabel, navigationBox, calendar, dayInfoBox);
+        
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: #f9f9f9;");
+        
+        view.setCenter(scrollPane);
+    }
+    
+    private GridPane createCalendarGrid() {
+        GridPane calendar = new GridPane();
+        calendar.setHgap(5);
+        calendar.setVgap(5);
+        calendar.setPadding(new Insets(10));
+        calendar.setAlignment(Pos.CENTER);
+        calendar.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 0);");
+        
+        // Заголовки дней недели
+        String[] dayNames = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
+        for (int i = 0; i < 7; i++) {
+            Label dayLabel = new Label(dayNames[i]);
+            dayLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+            dayLabel.setStyle("-fx-text-fill: #666; -fx-alignment: center;");
+            dayLabel.setPrefWidth(80);
+            dayLabel.setAlignment(Pos.CENTER);
+            calendar.add(dayLabel, i, 0);
+        }
+        
+        // Получаем первый день месяца и количество дней
+        LocalDate firstOfMonth = currentYearMonth.atDay(1);
+        int daysInMonth = currentYearMonth.lengthOfMonth();
+        int dayOfWeek = firstOfMonth.getDayOfWeek().getValue(); // 1 = Monday, 7 = Sunday
+        
+        // Заполняем календарь
+        int row = 1;
+        int col = dayOfWeek - 1; // Начинаем с понедельника
+        
+        for (int day = 1; day <= daysInMonth; day++) {
+            LocalDate date = currentYearMonth.atDay(day);
+            VBox dayCell = createDayCell(date);
+            calendar.add(dayCell, col, row);
+            
+            col++;
+            if (col > 6) {
+                col = 0;
+                row++;
+            }
+        }
+        
+        return calendar;
+    }
+    
+    private VBox createDayCell(LocalDate date) {
+        VBox cell = new VBox(3);
+        cell.setPrefSize(80, 70);
+        cell.setAlignment(Pos.TOP_CENTER);
+        cell.setPadding(new Insets(5));
+        
+        // Стиль по умолчанию
+        String baseStyle = "-fx-border-color: #ddd; -fx-border-width: 1; -fx-background-radius: 5; -fx-border-radius: 5;";
+        
+        // Подсчет занятий на этот день
+        long lessonsCount = allLessons.stream()
+            .filter(l -> l.getScheduledTime() != null && l.getScheduledTime().toLocalDate().equals(date))
+            .count();
+        
+        // Стиль в зависимости от даты
+        boolean isToday = date.equals(LocalDate.now());
+        boolean isSelected = date.equals(selectedDate);
+        boolean isPast = date.isBefore(LocalDate.now());
+        
+        if (isSelected) {
+            cell.setStyle(baseStyle + " -fx-background-color: #4CAF50; -fx-cursor: hand;");
+        } else if (isToday) {
+            cell.setStyle(baseStyle + " -fx-background-color: #E8F5E9; -fx-cursor: hand;");
+        } else if (lessonsCount > 0) {
+            cell.setStyle(baseStyle + " -fx-background-color: #FFF9C4; -fx-cursor: hand;");
+        } else if (isPast) {
+            cell.setStyle(baseStyle + " -fx-background-color: #f5f5f5; -fx-cursor: hand;");
+        } else {
+            cell.setStyle(baseStyle + " -fx-background-color: white; -fx-cursor: hand;");
+        }
+        
+        // Номер дня
+        Label dayNumber = new Label(String.valueOf(date.getDayOfMonth()));
+        dayNumber.setFont(Font.font("System", FontWeight.BOLD, 14));
+        dayNumber.setStyle("-fx-text-fill: " + (isSelected ? "white" : isPast ? "#999" : "#333") + ";");
+        
+        cell.getChildren().add(dayNumber);
+        
+        // Индикатор занятий
+        if (lessonsCount > 0) {
+            Label lessonsLabel = new Label(lessonsCount + " зан.");
+            lessonsLabel.setFont(new Font(9));
+            lessonsLabel.setStyle("-fx-text-fill: " + (isSelected ? "white" : "#FF9800") + "; -fx-font-weight: bold;");
+            cell.getChildren().add(lessonsLabel);
+        }
+        
+        // Обработка клика
+        cell.setOnMouseClicked(e -> {
+            selectedDate = date;
+            displaySchedule();
+        });
+        
+        return cell;
+    }
+    
+    private VBox createDayInfoBox() {
+        VBox dayInfo = new VBox(10);
+        dayInfo.setPadding(new Insets(15));
+        dayInfo.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 0);");
+        
+        // Заголовок с выбранной датой
+        Label dateLabel = new Label("Занятия на " + selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("ru"))));
+        dateLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        dateLabel.setStyle("-fx-text-fill: #333;");
+        
+        dayInfo.getChildren().add(dateLabel);
+        
+        // Список занятий на выбранный день
+        List<LessonDTO> dayLessons = allLessons.stream()
+            .filter(l -> l.getScheduledTime() != null && l.getScheduledTime().toLocalDate().equals(selectedDate))
+            .sorted(Comparator.comparing(LessonDTO::getScheduledTime))
+            .collect(Collectors.toList());
+        
+        if (dayLessons.isEmpty()) {
+            Label noLessonsLabel = new Label("Нет занятий на этот день");
+            noLessonsLabel.setStyle("-fx-text-fill: #999; -fx-font-style: italic;");
+            dayInfo.getChildren().add(noLessonsLabel);
+        } else {
+            for (LessonDTO lesson : dayLessons) {
+                VBox lessonCard = createLessonCard(lesson);
+                dayInfo.getChildren().add(lessonCard);
+            }
+        }
+        
+        return dayInfo;
+    }
+    
+    private VBox createLessonCard(LessonDTO lesson) {
+        VBox card = new VBox(5);
+        card.setPadding(new Insets(10));
+        card.setStyle("-fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-color: #fafafa; -fx-background-radius: 5;");
+        
+        // Время и статус
+        HBox headerBox = new HBox(10);
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+        
+        Label timeLabel = new Label(lesson.getScheduledTime().format(DateTimeFormatter.ofPattern("HH:mm")));
+        timeLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+        timeLabel.setStyle("-fx-text-fill: #4CAF50;");
+        
+        Label durationLabel = new Label("(" + lesson.getDurationMinutes() + " мин)");
+        durationLabel.setStyle("-fx-text-fill: #666;");
+        
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
+        Label statusLabel = new Label(translateStatus(lesson.getStatus()));
+        statusLabel.setStyle("-fx-font-size: 11px; -fx-padding: 2 6; -fx-background-radius: 3; " + getStatusStyle(lesson.getStatus()));
+        
+        headerBox.getChildren().addAll(timeLabel, durationLabel, spacer, statusLabel);
+        
+        // Студент и предмет
+        Label studentLabel = new Label("Студент: " + (lesson.getStudent() != null ? lesson.getStudent().getFullName() : "N/A"));
+        studentLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+        
+        Label subjectLabel = new Label("Предмет: " + (lesson.getSubject() != null ? lesson.getSubject().getName() : "N/A"));
+        subjectLabel.setStyle("-fx-text-fill: #666;");
+        
+        Label priceLabel = new Label("Стоимость: " + (lesson.getPrice() != null ? lesson.getPrice() + " ₽" : "N/A"));
+        priceLabel.setStyle("-fx-text-fill: #666;");
+        
+        card.getChildren().addAll(headerBox, studentLabel, subjectLabel, priceLabel);
+        
+        return card;
+    }
+    
+    private String getStatusStyle(String status) {
+        if (status == null) return "-fx-background-color: #e0e0e0; -fx-text-fill: #666;";
+        
+        switch (status.toUpperCase()) {
+            case "PENDING":
+                return "-fx-background-color: #FFF9C4; -fx-text-fill: #F57C00;";
+            case "CONFIRMED":
+            case "SCHEDULED":
+                return "-fx-background-color: #E3F2FD; -fx-text-fill: #1976D2;";
+            case "COMPLETED":
+                return "-fx-background-color: #E8F5E9; -fx-text-fill: #388E3C;";
+            case "CANCELLED":
+                return "-fx-background-color: #FFEBEE; -fx-text-fill: #D32F2F;";
+            default:
+                return "-fx-background-color: #e0e0e0; -fx-text-fill: #666;";
+        }
     }
     
     private void showProfile() {
