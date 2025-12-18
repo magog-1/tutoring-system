@@ -1,6 +1,7 @@
 package com.tutoring.client.view.student;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
@@ -251,7 +252,8 @@ public class StudentDashboard {
                         Alert errorAlert = new Alert(Alert.AlertType.ERROR);
                         errorAlert.setTitle("Ошибка");
                         errorAlert.setHeaderText("Ошибка бронирования");
-                        errorAlert.setContentText("Не удалось забронировать занятие.\n\nОшибка 500: " + ex.getMessage());
+                        errorAlert.setContentText("Не удалось забронировать занятие.\n\
+Ошибка 500: " + ex.getMessage());
                         errorAlert.showAndWait();
                     });
                 }
@@ -342,6 +344,38 @@ public class StudentDashboard {
     }
     
     private void showProfile() {
+        // Показываем загрузчик
+        VBox loadingBox = new VBox(20);
+        loadingBox.setAlignment(Pos.CENTER);
+        loadingBox.setPadding(new Insets(50));
+        Label loadingLabel = new Label("Загрузка профиля...");
+        loadingLabel.setFont(new Font(16));
+        ProgressIndicator progress = new ProgressIndicator();
+        loadingBox.getChildren().addAll(progress, loadingLabel);
+        view.setCenter(loadingBox);
+        
+        // Загружаем данные профиля с сервера
+        new Thread(() -> {
+            try {
+                String response = Session.getInstance().getApiClient().get("/student/profile", String.class);
+                Gson gson = GsonProvider.getGson();
+                JsonObject profileData = gson.fromJson(response, JsonObject.class);
+                
+                Platform.runLater(() -> displayProfile(profileData));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Ошибка");
+                    alert.setHeaderText("Ошибка загрузки профиля");
+                    alert.setContentText("Не удалось загрузить данные профиля: " + ex.getMessage());
+                    alert.showAndWait();
+                });
+            }
+        }).start();
+    }
+    
+    private void displayProfile(JsonObject profileData) {
         VBox content = new VBox(20);
         content.setPadding(new Insets(30));
         content.setAlignment(Pos.TOP_CENTER);
@@ -358,10 +392,12 @@ public class StudentDashboard {
         profileCard.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);");
         profileCard.setMaxWidth(600);
         
-        UserDTO user = Session.getInstance().getCurrentUser();
+        String firstName = getJsonString(profileData, "firstName");
+        String lastName = getJsonString(profileData, "lastName");
+        String fullName = firstName + " " + lastName;
         
         // Полное имя
-        Label nameLabel = new Label(user.getFullName());
+        Label nameLabel = new Label(fullName);
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
         
         // Роль
@@ -370,7 +406,11 @@ public class StudentDashboard {
         
         Separator separator1 = new Separator();
         
-        // Информация
+        // Основная информация
+        Label basicInfoHeader = new Label("Основная информация");
+        basicInfoHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
+        basicInfoHeader.setStyle("-fx-text-fill: #333;");
+        
         GridPane infoGrid = new GridPane();
         infoGrid.setHgap(15);
         infoGrid.setVgap(12);
@@ -379,23 +419,58 @@ public class StudentDashboard {
         int row = 0;
         
         // Username
-        addInfoRow(infoGrid, row++, "Имя пользователя:", user.getUsername());
+        addInfoRow(infoGrid, row++, "Имя пользователя:", getJsonString(profileData, "username"));
         
         // Email
-        addInfoRow(infoGrid, row++, "Email:", user.getEmail());
+        addInfoRow(infoGrid, row++, "Email:", getJsonString(profileData, "email"));
         
         // Телефон
-        if (user.getPhoneNumber() != null && !user.getPhoneNumber().isEmpty()) {
-            addInfoRow(infoGrid, row++, "Телефон:", user.getPhoneNumber());
+        String phone = getJsonString(profileData, "phoneNumber");
+        if (phone != null && !phone.isEmpty() && !phone.equals("N/A")) {
+            addInfoRow(infoGrid, row++, "Телефон:", phone);
         }
         
         // Имя
-        addInfoRow(infoGrid, row++, "Имя:", user.getFirstName());
+        addInfoRow(infoGrid, row++, "Имя:", firstName);
         
         // Фамилия
-        addInfoRow(infoGrid, row++, "Фамилия:", user.getLastName());
+        addInfoRow(infoGrid, row++, "Фамилия:", lastName);
         
-        profileCard.getChildren().addAll(nameLabel, roleLabel, separator1, infoGrid);
+        profileCard.getChildren().addAll(nameLabel, roleLabel, separator1, basicInfoHeader, infoGrid);
+        
+        // Дополнительная информация студента
+        String educationLevel = getJsonString(profileData, "educationLevel");
+        String learningGoals = getJsonString(profileData, "learningGoals");
+        
+        if ((educationLevel != null && !educationLevel.equals("N/A")) || 
+            (learningGoals != null && !learningGoals.equals("N/A"))) {
+            
+            Separator separator2 = new Separator();
+            profileCard.getChildren().add(separator2);
+            
+            Label studentInfoHeader = new Label("Информация об обучении");
+            studentInfoHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
+            studentInfoHeader.setStyle("-fx-text-fill: #333;");
+            profileCard.getChildren().add(studentInfoHeader);
+            
+            GridPane studentGrid = new GridPane();
+            studentGrid.setHgap(15);
+            studentGrid.setVgap(12);
+            studentGrid.setPadding(new Insets(10, 0, 0, 0));
+            
+            int sRow = 0;
+            
+            if (educationLevel != null && !educationLevel.equals("N/A")) {
+                String levelRu = translateEducationLevel(educationLevel);
+                addInfoRow(studentGrid, sRow++, "Уровень образования:", levelRu);
+            }
+            
+            if (learningGoals != null && !learningGoals.equals("N/A")) {
+                addInfoRow(studentGrid, sRow++, "Цели обучения:", learningGoals);
+            }
+            
+            profileCard.getChildren().add(studentGrid);
+        }
         
         // Кнопки действий
         HBox buttonBox = new HBox(15);
@@ -431,6 +506,26 @@ public class StudentDashboard {
         scrollPane.setStyle("-fx-background-color: #f9f9f9;");
         
         view.setCenter(scrollPane);
+    }
+    
+    private String getJsonString(JsonObject json, String key) {
+        if (json.has(key) && !json.get(key).isJsonNull()) {
+            return json.get(key).getAsString();
+        }
+        return "N/A";
+    }
+    
+    private String translateEducationLevel(String level) {
+        if (level == null) return "N/A";
+        switch (level) {
+            case "ELEMENTARY": return "Начальное";
+            case "MIDDLE_SCHOOL": return "Средняя школа";
+            case "HIGH_SCHOOL": return "Старшая школа";
+            case "UNDERGRADUATE": return "Бакалавриат";
+            case "GRADUATE": return "Магистратура";
+            case "PROFESSIONAL": return "Профессиональное";
+            default: return level;
+        }
     }
     
     private void addInfoRow(GridPane grid, int row, String label, String value) {
