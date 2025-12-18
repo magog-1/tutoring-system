@@ -23,6 +23,27 @@ public class TutorController {
     @Autowired
     private TutorRepository tutorRepository;
 
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            Tutor tutor = tutorRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
+
+            // Явно загружаем subjects для сериализации
+            if (tutor.getSubjects() != null) {
+                tutor.getSubjects().size();
+            }
+
+            return ResponseEntity.ok(tutor);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Ошибка: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/lessons")
     public ResponseEntity<?> getMyLessons() {
         try {
