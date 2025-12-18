@@ -293,7 +293,7 @@ public class StudentDashboard {
         TableColumn<LessonDTO, String> statusCol = new TableColumn<>("Статус");
         statusCol.setCellValueFactory(data -> 
             new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getStatus() != null ? data.getValue().getStatus() : "N/A"
+                data.getValue().getStatus() != null ? translateStatus(data.getValue().getStatus()) : "N/A"
             )
         );
         
@@ -306,6 +306,16 @@ public class StudentDashboard {
         view.setCenter(content);
         
         loadMyLessons();
+    }
+
+    private String translateStatus(String status) {
+        switch (status.toUpperCase()) {
+            case "PENDING": return "На согласовании преподавателем";
+            case "CONFIRMED": return "Подтверждено преподавателем";
+            case "COMPLETED": return "Завершено";
+            case "CANCELLED": return "Отклонено";
+            default: return status;
+        }
     }
     
     private void loadMyLessons() {
