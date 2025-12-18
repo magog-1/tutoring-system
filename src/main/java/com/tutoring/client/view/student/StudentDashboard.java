@@ -252,8 +252,7 @@ public class StudentDashboard {
                         Alert errorAlert = new Alert(Alert.AlertType.ERROR);
                         errorAlert.setTitle("Ошибка");
                         errorAlert.setHeaderText("Ошибка бронирования");
-                        errorAlert.setContentText("Не удалось забронировать занятие.\n\
-Ошибка 500: " + ex.getMessage());
+                        errorAlert.setContentText("Не удалось забронировать занятие.\n\nОшибка 500: " + ex.getMessage());
                         errorAlert.showAndWait();
                     });
                 }
