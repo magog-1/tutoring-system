@@ -7,6 +7,9 @@ import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.LessonDTO;
 import com.tutoring.client.view.LoginView;
+import com.tutoring.client.view.dialogs.ChangePasswordDialog;
+import com.tutoring.client.view.dialogs.EditProfileDialog;
+import com.tutoring.client.view.dialogs.ReviewsDialog;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -913,24 +916,70 @@ public class TutorDashboard {
         Button editButton = new Button("Редактировать профиль");
         editButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
         editButton.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Информация");
-            alert.setHeaderText("Функционал в разработке");
-            alert.setContentText("Редактирование профиля будет добавлено в следующей версии.");
-            alert.showAndWait();
+            EditProfileDialog dialog = new EditProfileDialog(profileData, true);
+            dialog.show().ifPresent(updatedData -> {
+                new Thread(() -> {
+                    try {
+                        Session.getInstance().getApiClient().put("/tutor/profile", updatedData);
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("Успех");
+                            alert.setHeaderText("Профиль обновлён");
+                            alert.setContentText("Изменения успешно сохранены!");
+                            alert.showAndWait();
+                            showProfile();
+                        });
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("Ошибка");
+                            alert.setHeaderText("Ошибка обновления");
+                            alert.setContentText("Не удалось обновить профиль: " + ex.getMessage());
+                            alert.showAndWait();
+                        });
+                    }
+                }).start();
+            });
         });
 
         Button changePasswordButton = new Button("Изменить пароль");
         changePasswordButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
         changePasswordButton.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Информация");
-            alert.setHeaderText("Функционал в разработке");
-            alert.setContentText("Изменение пароля будет добавлено в следующей версии.");
-            alert.showAndWait();
+            ChangePasswordDialog dialog = new ChangePasswordDialog();
+            dialog.show().ifPresent(passwordData -> {
+                new Thread(() -> {
+                    try {
+                        Session.getInstance().getApiClient().put("/user/password", passwordData);
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("Успех");
+                            alert.setHeaderText("Пароль изменён");
+                            alert.setContentText("Ваш пароль успешно обновлён!");
+                            alert.showAndWait();
+                        });
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("Ошибка");
+                            alert.setHeaderText("Ошибка смены пароля");
+                            alert.setContentText(ex.getMessage());
+                            alert.showAndWait();
+                        });
+                    }
+                }).start();
+            });
         });
 
-        buttonBox.getChildren().addAll(editButton, changePasswordButton);
+        Button reviewsButton = new Button("Мои отзывы");
+        reviewsButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
+        reviewsButton.setOnAction(e -> {
+            ReviewsDialog reviewsDialog = new ReviewsDialog();
+            reviewsDialog.show(primaryStage);
+        });
+
+        buttonBox.getChildren().addAll(editButton, changePasswordButton, reviewsButton);
 
         content.getChildren().addAll(titleLabel, profileCard, buttonBox);
 

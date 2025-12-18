@@ -7,6 +7,8 @@ import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.*;
 import com.tutoring.client.view.LoginView;
+import com.tutoring.client.view.dialogs.ChangePasswordDialog;
+import com.tutoring.client.view.dialogs.EditProfileDialog;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -627,122 +629,163 @@ public class StudentDashboard {
             }
         }).start();
     }
-    
+
     private void displayProfile(JsonObject profileData) {
         VBox content = new VBox(20);
         content.setPadding(new Insets(30));
         content.setAlignment(Pos.TOP_CENTER);
         content.setStyle("-fx-background-color: #f9f9f9;");
-        
+
         Label titleLabel = new Label("Мой профиль");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
         titleLabel.setStyle("-fx-text-fill: #2196F3;");
-        
+
         VBox profileCard = new VBox(15);
         profileCard.setPadding(new Insets(25));
         profileCard.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);");
         profileCard.setMaxWidth(600);
-        
+
         String firstName = getJsonString(profileData, "firstName");
         String lastName = getJsonString(profileData, "lastName");
         String fullName = firstName + " " + lastName;
-        
+
         Label nameLabel = new Label(fullName);
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
-        
+
         Label roleLabel = new Label("Роль: Студент");
         roleLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;");
-        
+
         Separator separator1 = new Separator();
-        
+
         Label basicInfoHeader = new Label("Основная информация");
         basicInfoHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
         basicInfoHeader.setStyle("-fx-text-fill: #333;");
-        
+
         GridPane infoGrid = new GridPane();
         infoGrid.setHgap(15);
         infoGrid.setVgap(12);
         infoGrid.setPadding(new Insets(10, 0, 0, 0));
-        
+
         int row = 0;
         addInfoRow(infoGrid, row++, "Имя пользователя:", getJsonString(profileData, "username"));
         addInfoRow(infoGrid, row++, "Email:", getJsonString(profileData, "email"));
-        
+
         String phone = getJsonString(profileData, "phoneNumber");
         if (phone != null && !phone.isEmpty() && !phone.equals("N/A")) {
             addInfoRow(infoGrid, row++, "Телефон:", phone);
         }
-        
+
         addInfoRow(infoGrid, row++, "Имя:", firstName);
         addInfoRow(infoGrid, row++, "Фамилия:", lastName);
-        
+
         profileCard.getChildren().addAll(nameLabel, roleLabel, separator1, basicInfoHeader, infoGrid);
-        
+
         String educationLevel = getJsonString(profileData, "educationLevel");
         String learningGoals = getJsonString(profileData, "learningGoals");
-        
-        if ((educationLevel != null && !educationLevel.equals("N/A")) || 
-            (learningGoals != null && !learningGoals.equals("N/A"))) {
-            
+
+        if ((educationLevel != null && !educationLevel.equals("N/A")) ||
+                (learningGoals != null && !learningGoals.equals("N/A"))) {
+
             Separator separator2 = new Separator();
             profileCard.getChildren().add(separator2);
-            
+
             Label studentInfoHeader = new Label("Информация об обучении");
             studentInfoHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
             studentInfoHeader.setStyle("-fx-text-fill: #333;");
             profileCard.getChildren().add(studentInfoHeader);
-            
+
             GridPane studentGrid = new GridPane();
             studentGrid.setHgap(15);
             studentGrid.setVgap(12);
             studentGrid.setPadding(new Insets(10, 0, 0, 0));
-            
+
             int sRow = 0;
-            
+
             if (educationLevel != null && !educationLevel.equals("N/A")) {
                 String levelRu = translateEducationLevel(educationLevel);
                 addInfoRow(studentGrid, sRow++, "Уровень образования:", levelRu);
             }
-            
+
             if (learningGoals != null && !learningGoals.equals("N/A")) {
                 addInfoRow(studentGrid, sRow++, "Цели обучения:", learningGoals);
             }
-            
+
             profileCard.getChildren().add(studentGrid);
         }
-        
+
+        // ============ НОВЫЙ КОД КНОПОК ============
         HBox buttonBox = new HBox(15);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setPadding(new Insets(20, 0, 0, 0));
-        
+
         Button editButton = new Button("Редактировать профиль");
         editButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
         editButton.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Информация");
-            alert.setHeaderText("Функционал в разработке");
-            alert.setContentText("Редактирование профиля будет добавлено в следующей версии.");
-            alert.showAndWait();
+            EditProfileDialog dialog = new EditProfileDialog(profileData, false);
+            dialog.show().ifPresent(updatedData -> {
+                new Thread(() -> {
+                    try {
+                        Session.getInstance().getApiClient().put("/student/profile", updatedData);
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("Успех");
+                            alert.setHeaderText("Профиль обновлён");
+                            alert.setContentText("Изменения успешно сохранены!");
+                            alert.showAndWait();
+                            showProfile();
+                        });
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("Ошибка");
+                            alert.setHeaderText("Ошибка обновления");
+                            alert.setContentText("Не удалось обновить профиль: " + ex.getMessage());
+                            alert.showAndWait();
+                        });
+                    }
+                }).start();
+            });
         });
-        
+
         Button changePasswordButton = new Button("Изменить пароль");
         changePasswordButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 20;");
         changePasswordButton.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Информация");
-            alert.setHeaderText("Функционал в разработке");
-            alert.setContentText("Изменение пароля будет добавлено в следующей версии.");
-            alert.showAndWait();
+            ChangePasswordDialog dialog = new ChangePasswordDialog();
+            dialog.show().ifPresent(passwordData -> {
+                new Thread(() -> {
+                    try {
+                        Session.getInstance().getApiClient().put("/user/password", passwordData);
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("Успех");
+                            alert.setHeaderText("Пароль изменён");
+                            alert.setContentText("Ваш пароль успешно обновлён!");
+                            alert.showAndWait();
+                        });
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("Ошибка");
+                            alert.setHeaderText("Ошибка смены пароля");
+                            alert.setContentText(ex.getMessage());
+                            alert.showAndWait();
+                        });
+                    }
+                }).start();
+            });
         });
-        
+
         buttonBox.getChildren().addAll(editButton, changePasswordButton);
-        
+        // ============ КОНЕЦ НОВОГО КОДА ============
+
         content.getChildren().addAll(titleLabel, profileCard, buttonBox);
-        
+
         ScrollPane scrollPane = new ScrollPane(content);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background-color: #f9f9f9;");
-        
+
         view.setCenter(scrollPane);
     }
     
