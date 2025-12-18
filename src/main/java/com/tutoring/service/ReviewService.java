@@ -33,10 +33,6 @@ public class ReviewService {
         return reviewRepository.findByTutorId(tutorId);
     }
 
-    public List<Review> getReviewsByStudent(Long studentId) {
-        return reviewRepository.findByStudentId(studentId);
-    }
-
     @Transactional
     public void deleteReview(Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
