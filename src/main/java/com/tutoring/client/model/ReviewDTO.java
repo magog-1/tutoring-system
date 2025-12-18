@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public class ReviewDTO {
     private Long id;
-    private StudentDTO student;
+    private UserDTO student;
     private TutorDTO tutor;
     private Integer rating;
     private String comment;
@@ -14,7 +14,7 @@ public class ReviewDTO {
     public ReviewDTO() {
     }
 
-    public ReviewDTO(Long id, StudentDTO student, TutorDTO tutor, Integer rating, String comment, LocalDateTime createdAt) {
+    public ReviewDTO(Long id, UserDTO student, TutorDTO tutor, Integer rating, String comment, LocalDateTime createdAt) {
         this.id = id;
         this.student = student;
         this.tutor = tutor;
@@ -31,11 +31,11 @@ public class ReviewDTO {
         this.id = id;
     }
 
-    public StudentDTO getStudent() {
+    public UserDTO getStudent() {
         return student;
     }
 
-    public void setStudent(StudentDTO student) {
+    public void setStudent(UserDTO student) {
         this.student = student;
     }
 
@@ -80,7 +80,10 @@ public class ReviewDTO {
     }
 
     public String getStudentName() {
-        return student != null ? student.getFullName() : "N/A";
+        if (student == null) return "N/A";
+        String firstName = student.getFirstName() != null ? student.getFirstName() : "";
+        String lastName = student.getLastName() != null ? student.getLastName() : "";
+        return (firstName + " " + lastName).trim();
     }
 
     public String getRatingStars() {
