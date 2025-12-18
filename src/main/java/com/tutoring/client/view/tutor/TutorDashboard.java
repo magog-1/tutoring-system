@@ -36,62 +36,81 @@ public class TutorDashboard {
     private List<LessonDTO> allLessons = new ArrayList<>();
     private LocalDate selectedDate = LocalDate.now();
     private YearMonth currentYearMonth = YearMonth.now();
+    
     public TutorDashboard(Stage primaryStage) {
         this.primaryStage = primaryStage;
         createView();
     }
+    
     private void createView() {
         view = new BorderPane();
+        
         // Top - заголовок
         VBox topBox = new VBox(10);
         topBox.setPadding(new Insets(15));
         topBox.setStyle("-fx-background-color: #4CAF50;");
+        
         Label titleLabel = new Label("Личный кабинет репетитора");
         titleLabel.setFont(new Font(20));
         titleLabel.setStyle("-fx-text-fill: white;");
+        
         Label userLabel = new Label("Пользователь: " + Session.getInstance().getCurrentUser().getFullName());
         userLabel.setStyle("-fx-text-fill: white;");
+        
         Button logoutButton = new Button("Выйти");
         logoutButton.setOnAction(e -> logout());
+        
         HBox topContent = new HBox(20);
         topContent.getChildren().addAll(titleLabel, userLabel);
         HBox.setHgrow(titleLabel, Priority.ALWAYS);
+        
         topBox.getChildren().addAll(topContent, logoutButton);
         view.setTop(topBox);
+        
         // Left - меню
         VBox leftMenu = createMenu();
         view.setLeft(leftMenu);
+        
         // Center - по умолчанию показываем занятия
         showMyLessons();
     }
+    
     private VBox createMenu() {
         VBox menu = new VBox(10);
         menu.setPadding(new Insets(15));
         menu.setStyle("-fx-background-color: #f5f5f5;");
         menu.setPrefWidth(200);
+        
         Button myLessonsBtn = new Button("Мои занятия");
         myLessonsBtn.setPrefWidth(180);
         myLessonsBtn.setOnAction(e -> showMyLessons());
+        
         Button scheduleBtn = new Button("Расписание");
         scheduleBtn.setPrefWidth(180);
         scheduleBtn.setOnAction(e -> showSchedule());
+        
         Button profileBtn = new Button("Мой профиль");
         profileBtn.setPrefWidth(180);
         profileBtn.setOnAction(e -> showProfile());
+        
         menu.getChildren().addAll(myLessonsBtn, scheduleBtn, profileBtn);
         return menu;
     }
+    
     private void showMyLessons() {
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
+        
         Label titleLabel = new Label("Мои занятия");
         titleLabel.setFont(new Font(18));
+        
         // Фильтры
         HBox filterBox = new HBox(10);
         filterBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        
         Label filterLabel = new Label("Фильтр:");
         statusFilter = new ComboBox<>();
-        statusFilter.getItems().addAll("Все", "Запланировано", "Завершено", "Отменено");
+        statusFilter.getItems().addAll("Все", "На согласовании", "Подтверждено", "Завершено", "Отклонено");
         statusFilter.setValue("Все");
         statusFilter.setOnAction(e -> loadMyLessons(statusFilter.getValue()));
 
@@ -158,13 +177,16 @@ public class TutorDashboard {
         Button viewDetailsButton = new Button("Подробности");
         viewDetailsButton.setOnAction(e -> viewLessonDetails());
 
+        Button confirmButton = new Button("Подтвердить");
+        confirmButton.setOnAction(e -> confirmLesson());
 
-
+        Button rejectButton = new Button("Отклонить");
+        rejectButton.setOnAction(e -> rejectLesson());
 
         Button completeButton = new Button("Завершить");
         completeButton.setOnAction(e -> completeLesson());
 
-        buttonBox.getChildren().addAll(refreshButton, viewDetailsButton, completeButton);
+        buttonBox.getChildren().addAll(refreshButton, viewDetailsButton, confirmButton, rejectButton, completeButton);
 
         content.getChildren().addAll(titleLabel, filterBox, lessonsTable, buttonBox);
         view.setCenter(content);
@@ -175,11 +197,10 @@ public class TutorDashboard {
 
     private String translateStatus(String status) {
         switch (status.toUpperCase()) {
-            case "PENDING": return "Ожидает";
-            case "CONFIRMED": return "Подтверждено";
-            case "SCHEDULED": return "Запланировано";
+            case "PENDING": return "На согласовании преподавателем";
+            case "CONFIRMED": return "Подтверждено преподавателем";
             case "COMPLETED": return "Завершено";
-            case "CANCELLED": return "Отменено";
+            case "CANCELLED": return "Отклонено";
             default: return status;
         }
     }
@@ -200,11 +221,12 @@ public class TutorDashboard {
                 LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
                 List<LessonDTO> lessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
 
-                allLessons = new ArrayList<>(lessons); // Сохраняем для календаря
+                allLessons = new ArrayList<>(lessons);
 
                 // Фильтрация по статусу
                 if (!"Все".equals(statusFilter)) {
-                    String statusEn = statusFilter.equals("Запланировано") ? "SCHEDULED" :
+                    String statusEn = statusFilter.equals("На согласовании") ? "PENDING" :
+                            statusFilter.equals("Подтверждено") ? "CONFIRMED" :
                             statusFilter.equals("Завершено") ? "COMPLETED" : "CANCELLED";
                     lessons = lessons.stream()
                             .filter(l -> statusEn.equalsIgnoreCase(l.getStatus()))
@@ -260,6 +282,77 @@ public class TutorDashboard {
         alert.showAndWait();
     }
 
+    private void confirmLesson() {
+        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showWarning("Выберите занятие");
+            return;
+        }
+
+        if (!"PENDING".equalsIgnoreCase(selected.getStatus())) {
+            showWarning("Подтвердить можно только занятия на согласовании");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                Session.getInstance().getApiClient()
+                        .put("/tutor/lessons/" + selected.getId() + "/confirm", null);
+
+                Platform.runLater(() -> {
+                    showInfo("Занятие успешно подтверждено!");
+                    loadMyLessons(statusFilter.getValue());
+                });
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка: " + ex.getMessage());
+                    alert.showAndWait();
+                });
+            }
+        }).start();
+    }
+
+    private void rejectLesson() {
+        LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showWarning("Выберите занятие");
+            return;
+        }
+
+        if (!"PENDING".equalsIgnoreCase(selected.getStatus())) {
+            showWarning("Отклонить можно только занятия на согласовании");
+            return;
+        }
+
+        Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmDialog.setTitle("Подтверждение отклонения");
+        confirmDialog.setHeaderText("Отклонить занятие #" + selected.getId() + "?");
+        confirmDialog.setContentText("Вы действительно хотите отклонить эту заявку на занятие?");
+
+        confirmDialog.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                new Thread(() -> {
+                    try {
+                        Session.getInstance().getApiClient()
+                                .put("/tutor/lessons/" + selected.getId() + "/cancel", null);
+
+                        Platform.runLater(() -> {
+                            showInfo("Занятие успешно отклонено!");
+                            loadMyLessons(statusFilter.getValue());
+                        });
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка: " + ex.getMessage());
+                            alert.showAndWait();
+                        });
+                    }
+                }).start();
+            }
+        });
+    }
+
     private void completeLesson() {
         LessonDTO selected = lessonsTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
@@ -269,6 +362,11 @@ public class TutorDashboard {
 
         if ("COMPLETED".equalsIgnoreCase(selected.getStatus())) {
             showWarning("Занятие уже завершено");
+            return;
+        }
+
+        if (!"CONFIRMED".equalsIgnoreCase(selected.getStatus())) {
+            showWarning("Завершить можно только подтвержденные занятия");
             return;
         }
 
@@ -315,7 +413,6 @@ public class TutorDashboard {
         dialog.showAndWait().ifPresent(data -> {
             new Thread(() -> {
                 try {
-                    // Передаем Map напрямую - ApiClient сам сериализует в JSON
                     Session.getInstance().getApiClient()
                             .put("/tutor/lessons/" + selected.getId() + "/complete", data);
 
@@ -335,7 +432,6 @@ public class TutorDashboard {
     }
 
     private void showSchedule() {
-        // Загружаем занятия, если еще не загружены
         if (allLessons.isEmpty()) {
             new Thread(() -> {
                 try {
@@ -363,12 +459,10 @@ public class TutorDashboard {
         content.setPadding(new Insets(20));
         content.setStyle("-fx-background-color: #f9f9f9;");
 
-        // Заголовок
         Label titleLabel = new Label("Расписание занятий");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
         titleLabel.setStyle("-fx-text-fill: #4CAF50;");
 
-        // Навигация по месяцам
         HBox navigationBox = new HBox(15);
         navigationBox.setAlignment(Pos.CENTER);
         navigationBox.setPadding(new Insets(10));
@@ -401,10 +495,7 @@ public class TutorDashboard {
 
         navigationBox.getChildren().addAll(prevMonthBtn, monthLabel, nextMonthBtn, todayBtn);
 
-        // Календарная сетка
         GridPane calendar = createCalendarGrid();
-
-        // Информация о выбранном дне
         VBox dayInfoBox = createDayInfoBox();
 
         content.getChildren().addAll(titleLabel, navigationBox, calendar, dayInfoBox);
@@ -424,7 +515,6 @@ public class TutorDashboard {
         calendar.setAlignment(Pos.CENTER);
         calendar.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 0);");
 
-        // Заголовки дней недели
         String[] dayNames = {"Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"};
         for (int i = 0; i < 7; i++) {
             Label dayLabel = new Label(dayNames[i]);
@@ -435,14 +525,12 @@ public class TutorDashboard {
             calendar.add(dayLabel, i, 0);
         }
 
-        // Получаем первый день месяца и количество дней
         LocalDate firstOfMonth = currentYearMonth.atDay(1);
         int daysInMonth = currentYearMonth.lengthOfMonth();
-        int dayOfWeek = firstOfMonth.getDayOfWeek().getValue(); // 1 = Monday, 7 = Sunday
+        int dayOfWeek = firstOfMonth.getDayOfWeek().getValue();
 
-        // Заполняем календарь
         int row = 1;
-        int col = dayOfWeek - 1; // Начинаем с понедельника
+        int col = dayOfWeek - 1;
 
         for (int day = 1; day <= daysInMonth; day++) {
             LocalDate date = currentYearMonth.atDay(day);
@@ -465,15 +553,12 @@ public class TutorDashboard {
         cell.setAlignment(Pos.TOP_CENTER);
         cell.setPadding(new Insets(5));
 
-        // Стиль по умолчанию
         String baseStyle = "-fx-border-color: #ddd; -fx-border-width: 1; -fx-background-radius: 5; -fx-border-radius: 5;";
 
-        // Подсчет занятий на этот день
         long lessonsCount = allLessons.stream()
                 .filter(l -> l.getScheduledTime() != null && l.getScheduledTime().toLocalDate().equals(date))
                 .count();
 
-        // Стиль в зависимости от даты
         boolean isToday = date.equals(LocalDate.now());
         boolean isSelected = date.equals(selectedDate);
         boolean isPast = date.isBefore(LocalDate.now());
@@ -490,14 +575,12 @@ public class TutorDashboard {
             cell.setStyle(baseStyle + " -fx-background-color: white; -fx-cursor: hand;");
         }
 
-        // Номер дня
         Label dayNumber = new Label(String.valueOf(date.getDayOfMonth()));
         dayNumber.setFont(Font.font("System", FontWeight.BOLD, 14));
         dayNumber.setStyle("-fx-text-fill: " + (isSelected ? "white" : isPast ? "#999" : "#333") + ";");
 
         cell.getChildren().add(dayNumber);
 
-        // Индикатор занятий
         if (lessonsCount > 0) {
             Label lessonsLabel = new Label(lessonsCount + " зан.");
             lessonsLabel.setFont(new Font(9));
@@ -505,7 +588,6 @@ public class TutorDashboard {
             cell.getChildren().add(lessonsLabel);
         }
 
-        // Обработка клика
         cell.setOnMouseClicked(e -> {
             selectedDate = date;
             displaySchedule();
@@ -519,14 +601,12 @@ public class TutorDashboard {
         dayInfo.setPadding(new Insets(15));
         dayInfo.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 5, 0, 0, 0);");
 
-        // Заголовок с выбранной датой
         Label dateLabel = new Label("Занятия на " + selectedDate.format(DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("ru"))));
         dateLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
         dateLabel.setStyle("-fx-text-fill: #333;");
 
         dayInfo.getChildren().add(dateLabel);
 
-        // Список занятий на выбранный день
         List<LessonDTO> dayLessons = allLessons.stream()
                 .filter(l -> l.getScheduledTime() != null && l.getScheduledTime().toLocalDate().equals(selectedDate))
                 .sorted(Comparator.comparing(LessonDTO::getScheduledTime))
@@ -551,7 +631,6 @@ public class TutorDashboard {
         card.setPadding(new Insets(10));
         card.setStyle("-fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-color: #fafafa; -fx-background-radius: 5;");
 
-        // Время и статус
         HBox headerBox = new HBox(10);
         headerBox.setAlignment(Pos.CENTER_LEFT);
 
@@ -570,7 +649,6 @@ public class TutorDashboard {
 
         headerBox.getChildren().addAll(timeLabel, durationLabel, spacer, statusLabel);
 
-        // Студент и предмет
         Label studentLabel = new Label("Студент: " + (lesson.getStudent() != null ? lesson.getStudent().getFullName() : "N/A"));
         studentLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
 
@@ -592,7 +670,6 @@ public class TutorDashboard {
             case "PENDING":
                 return "-fx-background-color: #FFF9C4; -fx-text-fill: #F57C00;";
             case "CONFIRMED":
-            case "SCHEDULED":
                 return "-fx-background-color: #E3F2FD; -fx-text-fill: #1976D2;";
             case "COMPLETED":
                 return "-fx-background-color: #E8F5E9; -fx-text-fill: #388E3C;";
@@ -604,7 +681,6 @@ public class TutorDashboard {
     }
 
     private void showProfile() {
-        // Показываем загрузчик
         VBox loadingBox = new VBox(20);
         loadingBox.setAlignment(Pos.CENTER);
         loadingBox.setPadding(new Insets(50));
@@ -614,7 +690,6 @@ public class TutorDashboard {
         loadingBox.getChildren().addAll(progress, loadingLabel);
         view.setCenter(loadingBox);
 
-        // Загружаем данные профиля с сервера
         new Thread(() -> {
             try {
                 String response = Session.getInstance().getApiClient().get("/tutor/profile", String.class);
@@ -641,12 +716,10 @@ public class TutorDashboard {
         content.setAlignment(Pos.TOP_CENTER);
         content.setStyle("-fx-background-color: #f9f9f9;");
 
-        // Заголовок
         Label titleLabel = new Label("Мой профиль");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
         titleLabel.setStyle("-fx-text-fill: #4CAF50;");
 
-        // Карточка профиля
         VBox profileCard = new VBox(15);
         profileCard.setPadding(new Insets(25));
         profileCard.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);");
@@ -656,11 +729,9 @@ public class TutorDashboard {
         String lastName = getJsonString(profileData, "lastName");
         String fullName = firstName + " " + lastName;
 
-        // Полное имя
         Label nameLabel = new Label(fullName);
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
 
-        // Роль и статус
         HBox roleBox = new HBox(15);
         roleBox.setAlignment(Pos.CENTER_LEFT);
 
@@ -676,7 +747,6 @@ public class TutorDashboard {
             roleBox.getChildren().add(roleLabel);
         }
 
-        // Рейтинг
         if (profileData.has("rating") && !profileData.get("rating").isJsonNull()) {
             double rating = profileData.get("rating").getAsDouble();
             int totalReviews = profileData.has("totalReviews") ? profileData.get("totalReviews").getAsInt() : 0;
@@ -688,7 +758,6 @@ public class TutorDashboard {
 
         Separator separator1 = new Separator();
 
-        // Основная информация
         Label basicInfoHeader = new Label("Основная информация");
         basicInfoHeader.setFont(Font.font("System", FontWeight.BOLD, 16));
         basicInfoHeader.setStyle("-fx-text-fill: #333;");
@@ -699,28 +768,19 @@ public class TutorDashboard {
         infoGrid.setPadding(new Insets(10, 0, 0, 0));
 
         int row = 0;
-
-        // Username
         addInfoRow(infoGrid, row++, "Имя пользователя:", getJsonString(profileData, "username"));
-
-        // Email
         addInfoRow(infoGrid, row++, "Email:", getJsonString(profileData, "email"));
 
-        // Телефон
         String phone = getJsonString(profileData, "phoneNumber");
         if (phone != null && !phone.isEmpty() && !phone.equals("N/A")) {
             addInfoRow(infoGrid, row++, "Телефон:", phone);
         }
 
-        // Имя
         addInfoRow(infoGrid, row++, "Имя:", firstName);
-
-        // Фамилия
         addInfoRow(infoGrid, row++, "Фамилия:", lastName);
 
         profileCard.getChildren().addAll(nameLabel, roleBox, separator1, basicInfoHeader, infoGrid);
 
-        // Профессиональная информация
         Separator separator2 = new Separator();
         profileCard.getChildren().add(separator2);
 
@@ -736,25 +796,21 @@ public class TutorDashboard {
 
         int pRow = 0;
 
-        // Образование
         String education = getJsonString(profileData, "education");
         if (education != null && !education.equals("N/A")) {
             addInfoRow(professionalGrid, pRow++, "Образование:", education);
         }
 
-        // Опыт работы
         if (profileData.has("experienceYears") && !profileData.get("experienceYears").isJsonNull()) {
             int experience = profileData.get("experienceYears").getAsInt();
             addInfoRow(professionalGrid, pRow++, "Опыт работы:", experience + " " + getYearsWord(experience));
         }
 
-        // Ставка
         if (profileData.has("hourlyRate") && !profileData.get("hourlyRate").isJsonNull()) {
             String rate = profileData.get("hourlyRate").getAsString();
             addInfoRow(professionalGrid, pRow++, "Ставка:", rate + " ₽/час");
         }
 
-        // Предметы
         if (profileData.has("subjects") && profileData.get("subjects").isJsonArray()) {
             JsonArray subjects = profileData.getAsJsonArray("subjects");
             if (subjects.size() > 0) {
@@ -774,7 +830,6 @@ public class TutorDashboard {
 
         profileCard.getChildren().add(professionalGrid);
 
-        // О себе
         String bio = getJsonString(profileData, "bio");
         if (bio != null && !bio.equals("N/A") && !bio.isEmpty()) {
             Separator separator3 = new Separator();
@@ -792,7 +847,6 @@ public class TutorDashboard {
             profileCard.getChildren().addAll(bioHeader, bioText);
         }
 
-        // Кнопки действий
         HBox buttonBox = new HBox(15);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setPadding(new Insets(20, 0, 0, 0));
