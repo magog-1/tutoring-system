@@ -45,34 +45,97 @@ public class TutorDashboard {
     private void createView() {
         view = new BorderPane();
         
-        // Top - заголовок
-        VBox topBox = new VBox(10);
-        topBox.setPadding(new Insets(15));
-        topBox.setStyle("-fx-background-color: #4CAF50;");
+        VBox headerBox = createHeader();
+        view.setTop(headerBox);
         
-        Label titleLabel = new Label("Личный кабинет репетитора");
-        titleLabel.setFont(new Font(20));
-        titleLabel.setStyle("-fx-text-fill: white;");
-        
-        Label userLabel = new Label("Пользователь: " + Session.getInstance().getCurrentUser().getFullName());
-        userLabel.setStyle("-fx-text-fill: white;");
-        
-        Button logoutButton = new Button("Выйти");
-        logoutButton.setOnAction(e -> logout());
-        
-        HBox topContent = new HBox(20);
-        topContent.getChildren().addAll(titleLabel, userLabel);
-        HBox.setHgrow(titleLabel, Priority.ALWAYS);
-        
-        topBox.getChildren().addAll(topContent, logoutButton);
-        view.setTop(topBox);
-        
-        // Left - меню
         VBox leftMenu = createMenu();
         view.setLeft(leftMenu);
         
-        // Center - по умолчанию показываем занятия
         showMyLessons();
+    }
+    
+    private VBox createHeader() {
+        VBox headerBox = new VBox(10);
+        headerBox.setPadding(new Insets(20));
+        headerBox.setStyle("-fx-background-color: linear-gradient(to right, #4CAF50, #45a049);");
+        
+        HBox topRow = new HBox(20);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+        
+        Label titleLabel = new Label("🎓 Личный кабинет репетитора");
+        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 22));
+        titleLabel.setStyle("-fx-text-fill: white;");
+        
+        Region spacer1 = new Region();
+        HBox.setHgrow(spacer1, Priority.ALWAYS);
+        
+        Label userLabel = new Label("👤 " + Session.getInstance().getCurrentUser().getFullName());
+        userLabel.setFont(new Font(14));
+        userLabel.setStyle("-fx-text-fill: white;");
+        
+        Button logoutButton = new Button("Выйти");
+        logoutButton.setStyle("-fx-background-color: rgba(255,255,255,0.2); -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-cursor: hand;");
+        logoutButton.setOnMouseEntered(e -> logoutButton.setStyle("-fx-background-color: rgba(255,255,255,0.3); -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-cursor: hand;"));
+        logoutButton.setOnMouseExited(e -> logoutButton.setStyle("-fx-background-color: rgba(255,255,255,0.2); -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15; -fx-cursor: hand;"));
+        logoutButton.setOnAction(e -> logout());
+        
+        topRow.getChildren().addAll(titleLabel, spacer1, userLabel, logoutButton);
+        
+        HBox statsRow = new HBox(30);
+        statsRow.setAlignment(Pos.CENTER_LEFT);
+        statsRow.setPadding(new Insets(10, 0, 0, 0));
+        
+        VBox todayLessons = createStatCard("Сегодня", String.valueOf(countTodayLessons()), "📅");
+        VBox pendingLessons = createStatCard("На согласовании", String.valueOf(countByStatus("PENDING")), "⌛");
+        VBox confirmedLessons = createStatCard("Подтверждено", String.valueOf(countByStatus("CONFIRMED")), "✅");
+        VBox completedTotal = createStatCard("Завершено", String.valueOf(countByStatus("COMPLETED")), "🎯");
+        
+        statsRow.getChildren().addAll(todayLessons, pendingLessons, confirmedLessons, completedTotal);
+        
+        Separator separator = new Separator();
+        separator.setStyle("-fx-background-color: rgba(255,255,255,0.3);");
+        
+        headerBox.getChildren().addAll(topRow, separator, statsRow);
+        return headerBox;
+    }
+    
+    private VBox createStatCard(String label, String value, String emoji) {
+        VBox card = new VBox(5);
+        card.setAlignment(Pos.CENTER);
+        card.setPadding(new Insets(10));
+        card.setStyle("-fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 8;");
+        card.setPrefWidth(150);
+        
+        Label emojiLabel = new Label(emoji);
+        emojiLabel.setFont(new Font(20));
+        
+        Label valueLabel = new Label(value);
+        valueLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+        valueLabel.setStyle("-fx-text-fill: white;");
+        
+        Label labelText = new Label(label);
+        labelText.setFont(new Font(11));
+        labelText.setStyle("-fx-text-fill: rgba(255,255,255,0.9);");
+        labelText.setWrapText(true);
+        labelText.setMaxWidth(140);
+        labelText.setAlignment(Pos.CENTER);
+        labelText.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+        
+        card.getChildren().addAll(emojiLabel, valueLabel, labelText);
+        return card;
+    }
+    
+    private long countTodayLessons() {
+        return allLessons.stream()
+            .filter(l -> l.getScheduledTime() != null && 
+                        l.getScheduledTime().toLocalDate().equals(LocalDate.now()))
+            .count();
+    }
+    
+    private long countByStatus(String status) {
+        return allLessons.stream()
+            .filter(l -> status.equalsIgnoreCase(l.getStatus()))
+            .count();
     }
     
     private VBox createMenu() {
@@ -104,7 +167,6 @@ public class TutorDashboard {
         Label titleLabel = new Label("Мои занятия");
         titleLabel.setFont(new Font(18));
         
-        // Фильтры
         HBox filterBox = new HBox(10);
         filterBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         
@@ -116,7 +178,6 @@ public class TutorDashboard {
 
         filterBox.getChildren().addAll(filterLabel, statusFilter);
 
-        // Таблица занятий
         lessonsTable = new TableView<>();
         lessonsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -168,7 +229,6 @@ public class TutorDashboard {
 
         lessonsTable.getColumns().addAll(idCol, studentCol, subjectCol, timeCol, durationCol, statusCol, priceCol);
 
-        // Кнопки управления
         HBox buttonBox = new HBox(10);
 
         Button refreshButton = new Button("Обновить");
@@ -191,7 +251,6 @@ public class TutorDashboard {
         content.getChildren().addAll(titleLabel, filterBox, lessonsTable, buttonBox);
         view.setCenter(content);
 
-        // Загрузка данных
         loadMyLessons("Все");
     }
 
@@ -223,7 +282,6 @@ public class TutorDashboard {
 
                 allLessons = new ArrayList<>(lessons);
 
-                // Фильтрация по статусу
                 if (!"Все".equals(statusFilter)) {
                     String statusEn = statusFilter.equals("На согласовании") ? "PENDING" :
                             statusFilter.equals("Подтверждено") ? "CONFIRMED" :
@@ -239,6 +297,8 @@ public class TutorDashboard {
                 Platform.runLater(() -> {
                     ObservableList<LessonDTO> data = FXCollections.observableArrayList(finalLessons);
                     lessonsTable.setItems(data);
+                    VBox headerBox = createHeader();
+                    view.setTop(headerBox);
                 });
             } catch (Exception ex) {
                 System.err.println("[ERROR] Ошибка при загрузке занятий:");
@@ -370,7 +430,6 @@ public class TutorDashboard {
             return;
         }
 
-        // Диалог для ввода заметок и ДЗ
         Dialog<Map<String, String>> dialog = new Dialog<>();
         dialog.setTitle("Завершение занятия");
         dialog.setHeaderText("Занятие #" + selected.getId());
