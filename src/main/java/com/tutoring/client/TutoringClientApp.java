@@ -10,6 +10,7 @@ public class TutoringClientApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Система онлайн-репетиторства");
+        primaryStage.setMaximized(true);
         
         LoginView loginView = new LoginView(primaryStage);
         Scene scene = new Scene(loginView.getView(), 400, 500);
