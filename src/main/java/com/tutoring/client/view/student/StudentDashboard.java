@@ -41,6 +41,7 @@ public class StudentDashboard {
     public StudentDashboard(Stage primaryStage) {
         this.primaryStage = primaryStage;
         createView();
+        loadLessonsForStats();
     }
     
     private void createView() {
@@ -53,6 +54,27 @@ public class StudentDashboard {
         view.setLeft(leftMenu);
         
         showTutorSearch();
+    }
+    
+    private void loadLessonsForStats() {
+        new Thread(() -> {
+            try {
+                String response = Session.getInstance().getApiClient().get("/student/lessons", String.class);
+                if (response != null && !response.trim().isEmpty()) {
+                    Gson gson = GsonProvider.getGson();
+                    LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
+                    allLessons = lessonsArray != null ? new ArrayList<>(Arrays.asList(lessonsArray)) : new ArrayList<>();
+                    
+                    Platform.runLater(() -> {
+                        VBox headerBox = createHeader();
+                        view.setTop(headerBox);
+                    });
+                }
+            } catch (Exception ex) {
+                System.err.println("[ERROR] Ошибка при загрузке занятий для статистики:");
+                ex.printStackTrace();
+            }
+        }).start();
     }
     
     private VBox createHeader() {
@@ -301,6 +323,8 @@ public class StudentDashboard {
                     
                     System.out.println("[DEBUG] Ответ от сервера: " + response);
                     
+                    loadLessonsForStats();
+                    
                     Platform.runLater(() -> {
                         Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
                         successAlert.setTitle("Успех");
@@ -333,25 +357,9 @@ public class StudentDashboard {
     
     private void showMyLessons() {
         if (allLessons.isEmpty()) {
-            new Thread(() -> {
-                try {
-                    String response = Session.getInstance().getApiClient().get("/student/lessons", String.class);
-                    if (response != null && !response.trim().isEmpty()) {
-                        Gson gson = GsonProvider.getGson();
-                        LessonDTO[] lessonsArray = gson.fromJson(response, LessonDTO[].class);
-                        allLessons = lessonsArray != null ? Arrays.asList(lessonsArray) : new ArrayList<>();
-                        Platform.runLater(this::displaySchedule);
-                    } else {
-                        Platform.runLater(this::displaySchedule);
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    Platform.runLater(this::displaySchedule);
-                }
-            }).start();
-        } else {
-            displaySchedule();
+            loadLessonsForStats();
         }
+        displaySchedule();
     }
 
     private void displaySchedule() {
