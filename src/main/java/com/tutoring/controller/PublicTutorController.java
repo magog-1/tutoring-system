@@ -56,7 +56,7 @@ public class PublicTutorController {
     @GetMapping("/{tutorId}/reviews")
     public ResponseEntity<?> getTutorReviews(@PathVariable Long tutorId) {
         try {
-            List<Review> reviews = reviewService.getReviewsForTutor(tutorId);
+            List<Review> reviews = reviewService.getReviewsByTutor(tutorId);
             return ResponseEntity.ok(reviews);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Ошибка при получении отзывов");
