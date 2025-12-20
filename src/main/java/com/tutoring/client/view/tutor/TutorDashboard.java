@@ -360,7 +360,7 @@ public class TutorDashboard {
         new Thread(() -> {
             try {
                 Session.getInstance().getApiClient()
-                        .put("/tutor/lessons/" + selected.getId() + "/confirm", null);
+                        .put("/tutor/lessons/" + selected.getId() + "/confirm", new HashMap<>());
 
                 Platform.runLater(() -> {
                     showInfo("Занятие успешно подтверждено!");
@@ -398,7 +398,7 @@ public class TutorDashboard {
                 new Thread(() -> {
                     try {
                         Session.getInstance().getApiClient()
-                                .put("/tutor/lessons/" + selected.getId() + "/cancel", null);
+                                .put("/tutor/lessons/" + selected.getId() + "/cancel", new HashMap<>());
 
                         Platform.runLater(() -> {
                             showInfo("Занятие успешно отклонено!");
