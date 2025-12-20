@@ -63,10 +63,10 @@ public class LoginView {
         progressIndicator.setMaxSize(30, 30);
         
         loginButton.setOnAction(e -> {
-            String username = usernameField.getText();
+            String usernameOrEmail = usernameField.getText().trim();
             String password = passwordField.getText();
             
-            if (username.isEmpty() || password.isEmpty()) {
+            if (usernameOrEmail.isEmpty() || password.isEmpty()) {
                 statusLabel.setText("Заполните все поля");
                 return;
             }
@@ -83,7 +83,17 @@ public class LoginView {
                     
                     // Отправляем запрос на логин
                     Map<String, Object> loginRequest = new HashMap<>();
-                    loginRequest.put("username", username);
+                    
+                    // Проверяем, это email или username
+                    if (usernameOrEmail.contains("@")) {
+                        // Это email
+                        loginRequest.put("email", usernameOrEmail);
+                        loginRequest.put("username", ""); // Пустой username
+                    } else {
+                        // Это username
+                        loginRequest.put("username", usernameOrEmail);
+                        loginRequest.put("email", ""); // Пустой email
+                    }
                     loginRequest.put("password", password);
                     
                     String loginResponse = session.getApiClient().post("/auth/login", loginRequest, String.class);
