@@ -84,9 +84,9 @@ public class TutorDashboard {
         
         topRow.getChildren().addAll(titleLabel, spacer1, userLabel, logoutButton);
         
-        HBox statsRow = new HBox(30);
+        HBox statsRow = new HBox(20);
         statsRow.setAlignment(Pos.CENTER_LEFT);
-        statsRow.setPadding(new Insets(10, 0, 0, 0));
+        statsRow.setPadding(new Insets(5, 0, 0, 0));
         
         VBox todayLessons = createStatCard("Сегодня", String.valueOf(countTodayLessons()), "📅");
         VBox pendingLessons = createStatCard("На согласовании", String.valueOf(countByStatus("PENDING")), "⌛");
@@ -103,24 +103,24 @@ public class TutorDashboard {
     }
     
     private VBox createStatCard(String label, String value, String emoji) {
-        VBox card = new VBox(5);
+        VBox card = new VBox(2);
         card.setAlignment(Pos.CENTER);
-        card.setPadding(new Insets(10));
+        card.setPadding(new Insets(6));
         card.setStyle("-fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 8;");
-        card.setPrefWidth(150);
+        card.setPrefWidth(130);
         
         Label emojiLabel = new Label(emoji);
-        emojiLabel.setFont(new Font(20));
+        emojiLabel.setFont(new Font(16));
         
         Label valueLabel = new Label(value);
-        valueLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+        valueLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
         valueLabel.setStyle("-fx-text-fill: white;");
         
         Label labelText = new Label(label);
-        labelText.setFont(new Font(11));
+        labelText.setFont(new Font(8));
         labelText.setStyle("-fx-text-fill: rgba(255,255,255,0.9);");
         labelText.setWrapText(true);
-        labelText.setMaxWidth(140);
+        labelText.setMaxWidth(100);
         labelText.setAlignment(Pos.CENTER);
         labelText.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
         
