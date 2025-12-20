@@ -30,6 +30,7 @@ public class EditProfileDialog {
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new Insets(20));
+        grid.setPrefWidth(500);
         
         TextField firstNameField = new TextField();
         firstNameField.setText(getJsonString(profileData, "firstName"));
@@ -55,6 +56,7 @@ public class EditProfileDialog {
         TextField experienceField = null;
         TextField hourlyRateField = null;
         TextArea bioArea = null;
+        TextArea subjectsArea = null;
         
         if (isTutor) {
             educationField = new TextField();
@@ -76,8 +78,15 @@ public class EditProfileDialog {
             bioArea = new TextArea();
             bioArea.setText(getJsonString(profileData, "bio"));
             bioArea.setPromptText("О себе...");
-            bioArea.setPrefRowCount(4);
+            bioArea.setPrefRowCount(3);
             bioArea.setWrapText(true);
+            
+            // НОВОЕ ПОЛЕ - Предметы
+            subjectsArea = new TextArea();
+            subjectsArea.setText(getJsonString(profileData, "subjects"));
+            subjectsArea.setPromptText("Предметы (по одному на строку)\nНапример:\nМатематика\nФизика\nАнглийский язык");
+            subjectsArea.setPrefRowCount(4);
+            subjectsArea.setWrapText(true);
             
             grid.add(new Label("Образование:"), 0, row);
             grid.add(educationField, 1, row++);
@@ -87,6 +96,19 @@ public class EditProfileDialog {
             grid.add(hourlyRateField, 1, row++);
             grid.add(new Label("О себе:"), 0, row);
             grid.add(bioArea, 1, row++);
+            
+            // Добавляем поле предметов
+            Label subjectsLabel = new Label("Преподаваемые предметы:");
+            subjectsLabel.setStyle("-fx-alignment: top-left;");
+            grid.add(subjectsLabel, 0, row);
+            grid.add(subjectsArea, 1, row++);
+            
+            // Подсказка
+            Label hintLabel = new Label("⚠️ Укажите предметы, которые вы преподаёте");
+            hintLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 11px; -fx-font-style: italic;");
+            hintLabel.setWrapText(true);
+            grid.add(hintLabel, 1, row++);
+            
         } else {
             ComboBox<String> educationLevelCombo = new ComboBox<>();
             educationLevelCombo.getItems().addAll(
@@ -121,6 +143,7 @@ public class EditProfileDialog {
         final TextField finalExperienceField = experienceField;
         final TextField finalHourlyRateField = hourlyRateField;
         final TextArea finalBioArea = bioArea;
+        final TextArea finalSubjectsArea = subjectsArea;
         
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
@@ -134,6 +157,9 @@ public class EditProfileDialog {
                     result.put("experienceYears", finalExperienceField.getText());
                     result.put("hourlyRate", finalHourlyRateField.getText());
                     result.put("bio", finalBioArea.getText());
+                    
+                    // Добавляем предметы
+                    result.put("subjects", finalSubjectsArea.getText());
                 } else {
                     ComboBox<String> combo = (ComboBox<String>) grid.getChildren().get(7);
                     String selectedLevel = combo.getValue();
