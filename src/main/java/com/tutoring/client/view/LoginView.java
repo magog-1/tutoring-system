@@ -81,22 +81,22 @@ public class LoginView {
                 try {
                     Session session = Session.getInstance();
                     
-                    // Отправляем запрос на логин
-                    Map<String, Object> loginRequest = new HashMap<>();
+                    // Отправляем запрос на логин как form data
+                    Map<String, String> loginForm = new HashMap<>();
                     
                     // Проверяем, это email или username
                     if (usernameOrEmail.contains("@")) {
                         // Это email
-                        loginRequest.put("email", usernameOrEmail);
-                        loginRequest.put("username", ""); // Пустой username
+                        loginForm.put("email", usernameOrEmail);
+                        loginForm.put("username", ""); // Пустой username
                     } else {
                         // Это username
-                        loginRequest.put("username", usernameOrEmail);
-                        loginRequest.put("email", ""); // Пустой email
+                        loginForm.put("username", usernameOrEmail);
+                        loginForm.put("email", ""); // Пустой email
                     }
-                    loginRequest.put("password", password);
+                    loginForm.put("password", password);
                     
-                    String loginResponse = session.getApiClient().post("/auth/login", loginRequest, String.class);
+                    String loginResponse = session.getApiClient().postForm("/auth/login", loginForm, String.class);
                     
                     System.out.println("[DEBUG] Login response: " + loginResponse);
                     
