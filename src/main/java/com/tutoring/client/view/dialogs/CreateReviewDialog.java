@@ -86,7 +86,7 @@ public class CreateReviewDialog {
         commentArea.setStyle("-fx-font-size: 13px;");
 
         // Информация
-        Label infoLabel = new Label("⚠️Отзыв будет виден всем пользователям");
+        Label infoLabel = new Label("⚠ Отзыв будет виден всем пользователям");
         infoLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px; -fx-font-style: italic;");
 
         content.getChildren().addAll(ratingLabel, ratingBox, commentLabel, commentArea, infoLabel);
