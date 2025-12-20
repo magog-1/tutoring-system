@@ -2,6 +2,7 @@ package com.tutoring.client.model;
 
 public class UserDTO {
     private Long id;
+    private String username;
     private String email;
     private String role;
     private String firstName;
@@ -16,6 +17,14 @@ public class UserDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getEmail() {
