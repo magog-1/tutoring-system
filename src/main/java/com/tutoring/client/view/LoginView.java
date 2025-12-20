@@ -104,35 +104,53 @@ public class LoginView {
                     
                     // Парсим ответ
                     Gson gson = GsonProvider.getGson();
-                    JsonElement responseElement = JsonParser.parseString(loginResponse);
-                    
                     String token;
-                    UserDTO user;
+                    UserDTO user = new UserDTO();
+                    user.setUsername(usernameOrEmail);
                     
-                    if (responseElement.isJsonPrimitive()) {
-                        // Сервер вернул только JWT токен
-                        token = responseElement.getAsString();
-                        System.out.println("[DEBUG] Получен только токен: " + token);
+                    // Пытаемся распарсить как JSON
+                    try {
+                        JsonElement responseElement = JsonParser.parseString(loginResponse);
                         
-                        // Устанавливаем токен
-                        session.getApiClient().setAuthToken(token);
-                        
-                        // Создаём mock user с основными данными
-                        // TODO: Получить реальную информацию с сервера через /users/me или похожий эндпоинт
-                        user = new UserDTO();
-                        user.setUsername(usernameOrEmail);
-                        
-                        // Пытаемся распарсить JWT токен чтобы получить роль
+                        if (responseElement.isJsonPrimitive()) {
+                            // Просто JWT токен
+                            token = responseElement.getAsString();
+                        } else if (responseElement.isJsonObject()) {
+                            // JSON объект с токеном и user
+                            JsonObject responseJson = responseElement.getAsJsonObject();
+                            token = responseJson.get("token").getAsString();
+                            
+                            if (responseJson.has("user")) {
+                                JsonObject userJson = responseJson.getAsJsonObject("user");
+                                user = gson.fromJson(userJson, UserDTO.class);
+                            }
+                        } else {
+                            throw new Exception("Неподдерживаемый формат ответа");
+                        }
+                    } catch (Exception jsonEx) {
+                        // Не JSON - считаем, что это просто токен
+                        System.out.println("[DEBUG] Ответ не JSON, считаем plain text токеном");
+                        token = loginResponse.trim();
+                    }
+                    
+                    System.out.println("[DEBUG] Token: " + token);
+                    
+                    // Устанавливаем токен
+                    session.getApiClient().setAuthToken(token);
+                    
+                    // Пытаемся распарсить JWT чтобы получить роль
+                    if (user.getRole() == null) {
                         try {
                             String[] parts = token.split("\\.");
                             if (parts.length >= 2) {
                                 String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+                                System.out.println("[DEBUG] JWT payload: " + payload);
+                                
                                 JsonObject payloadJson = gson.fromJson(payload, JsonObject.class);
                                 
                                 if (payloadJson.has("role")) {
                                     user.setRole(payloadJson.get("role").getAsString());
                                 } else if (payloadJson.has("authorities")) {
-                                    // Spring Security может использовать authorities
                                     String authorities = payloadJson.get("authorities").getAsString();
                                     user.setRole(authorities.replace("ROLE_", ""));
                                 }
@@ -143,23 +161,14 @@ public class LoginView {
                             }
                         } catch (Exception ex) {
                             System.err.println("[WARNING] Не удалось распарсить JWT: " + ex.getMessage());
-                            // По умолчанию - student
-                            user.setRole("STUDENT");
+                            ex.printStackTrace();
                         }
-                        
-                    } else if (responseElement.isJsonObject()) {
-                        // Сервер вернул JSON объект
-                        JsonObject responseJson = responseElement.getAsJsonObject();
-                        
-                        // Извлекаем токен
-                        token = responseJson.get("token").getAsString();
-                        session.getApiClient().setAuthToken(token);
-                        
-                        // Извлекаем информацию о пользователе из ответа
-                        JsonObject userJson = responseJson.getAsJsonObject("user");
-                        user = gson.fromJson(userJson, UserDTO.class);
-                    } else {
-                        throw new Exception("Неподдерживаемый формат ответа сервера");
+                    }
+                    
+                    // Если роль всё ещё null - устанавливаем STUDENT по умолчанию
+                    if (user.getRole() == null) {
+                        System.out.println("[WARNING] Роль не найдена, используем STUDENT");
+                        user.setRole("STUDENT");
                     }
                     
                     System.out.println("[DEBUG] Получена информация о пользователе: " + user.getUsername() + ", роль: " + user.getRole());
