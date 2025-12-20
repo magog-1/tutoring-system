@@ -1,6 +1,7 @@
 package com.tutoring.client.view;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.UserDTO;
@@ -15,6 +16,9 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class LoginView {
     private VBox view;
@@ -76,13 +80,27 @@ public class LoginView {
             new Thread(() -> {
                 try {
                     Session session = Session.getInstance();
-                    session.login(username, password);
                     
-                    // Получаем реальную информацию о пользователе с сервера
-                    String userInfoResponse = session.getApiClient().get("/auth/me", String.class);
+                    // Отправляем запрос на логин
+                    Map<String, Object> loginRequest = new HashMap<>();
+                    loginRequest.put("username", username);
+                    loginRequest.put("password", password);
                     
+                    String loginResponse = session.getApiClient().post("/auth/login", loginRequest, String.class);
+                    
+                    System.out.println("[DEBUG] Login response: " + loginResponse);
+                    
+                    // Парсим ответ
                     Gson gson = GsonProvider.getGson();
-                    UserDTO user = gson.fromJson(userInfoResponse, UserDTO.class);
+                    JsonObject responseJson = gson.fromJson(loginResponse, JsonObject.class);
+                    
+                    // Извлекаем токен
+                    String token = responseJson.get("token").getAsString();
+                    session.setToken(token);
+                    
+                    // Извлекаем информацию о пользователе из ответа
+                    JsonObject userJson = responseJson.getAsJsonObject("user");
+                    UserDTO user = gson.fromJson(userJson, UserDTO.class);
                     
                     System.out.println("[DEBUG] Получена информация о пользователе: " + user.getUsername() + ", роль: " + user.getRole());
                     
@@ -100,10 +118,12 @@ public class LoginView {
                         statusLabel.setStyle("-fx-text-fill: red;");
                         
                         String errorMessage = ex.getMessage();
-                        if (errorMessage != null && errorMessage.contains("403")) {
+                        if (errorMessage != null && (errorMessage.contains("403") || errorMessage.contains("401"))) {
                             statusLabel.setText("Неправильное имя пользователя или пароль");
                         } else if (errorMessage != null && errorMessage.contains("not verified")) {
                             statusLabel.setText("Ваш аккаунт ещё не прошёл верификацию.\nПожалуйста, обратитесь к менеджеру.");
+                        } else if (errorMessage != null && errorMessage.contains("Account not verified")) {
+                            statusLabel.setText("Ваш аккаунт репетитора ожидает верификации.\nПожалуйста, дождитесь подтверждения от менеджера.");
                         } else {
                             statusLabel.setText("Ошибка входа: " + errorMessage);
                         }
