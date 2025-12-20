@@ -83,7 +83,7 @@ public class LoginView {
                     System.out.println("[DEBUG] Логин успешен, получаем данные пользователя...");
                     
                     // Шаг 2: Получаем данные пользователя с сервера
-                    String userJsonResponse = session.getApiClient().get("/user/me", String.class);
+                    String userJsonResponse = session.getApiClient().get("/auth/current-user", String.class);
                     System.out.println("[DEBUG] Ответ сервера: " + userJsonResponse);
                     
                     // Шаг 3: Парсим JSON в UserDTO
