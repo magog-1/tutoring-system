@@ -2,6 +2,7 @@ package com.tutoring.client.view.dialogs;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
@@ -15,7 +16,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
@@ -23,6 +23,8 @@ import javafx.stage.Stage;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class TutorDetailsDialog {
     private final TutorDTO tutor;
@@ -41,12 +43,10 @@ public class TutorDetailsDialog {
         mainBox.setPadding(new Insets(25));
         mainBox.setStyle("-fx-background-color: #f9f9f9;");
 
-        // Заголовок с именем репетитора
         Label nameLabel = new Label(tutor.getFullName());
         nameLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
         nameLabel.setStyle("-fx-text-fill: #2196F3;");
 
-        // Рейтинг
         HBox ratingBox = new HBox(10);
         ratingBox.setAlignment(Pos.CENTER_LEFT);
         
@@ -66,22 +66,17 @@ public class TutorDetailsDialog {
         
         ratingBox.getChildren().addAll(starsLabel, ratingLabel, reviewCountLabel);
 
-        // Карточка с информацией
         VBox profileCard = createProfileCard();
 
-        // Разделитель
         Separator separator = new Separator();
 
-        // Заголовок отзывов
         Label reviewsTitle = new Label("Отзывы");
         reviewsTitle.setFont(Font.font("System", FontWeight.BOLD, 18));
         reviewsTitle.setStyle("-fx-text-fill: #333;");
 
-        // Контейнер для отзывов
         VBox reviewsContainer = new VBox(15);
         reviewsContainer.setPadding(new Insets(10));
 
-        // Индикатор загрузки
         ProgressIndicator loadingIndicator = new ProgressIndicator();
         loadingIndicator.setMaxSize(50, 50);
         VBox loadingBox = new VBox(loadingIndicator);
@@ -95,7 +90,6 @@ public class TutorDetailsDialog {
         reviewsScroll.setPrefHeight(300);
         VBox.setVgrow(reviewsScroll, Priority.ALWAYS);
 
-        // Кнопка закрытия
         Button closeButton = new Button("Закрыть");
         closeButton.setStyle("-fx-background-color: #757575; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 30;");
         closeButton.setOnAction(e -> dialog.close());
@@ -117,7 +111,6 @@ public class TutorDetailsDialog {
         Scene scene = new Scene(mainBox, 750, 700);
         dialog.setScene(scene);
 
-        // Загрузка отзывов
         loadReviews(reviewsContainer);
 
         dialog.show();
@@ -128,24 +121,21 @@ public class TutorDetailsDialog {
         card.setPadding(new Insets(20));
         card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);");
 
-        // Образование
         if (tutor.getEducation() != null && !tutor.getEducation().isEmpty()) {
             addInfoRow(card, "🎓 Образование:", tutor.getEducation());
         }
 
-        // Опыт работы
         if (tutor.getExperienceYears() != null && tutor.getExperienceYears() > 0) {
             addInfoRow(card, "💼 Опыт работы:", 
                 tutor.getExperienceYears() + " " + getYearsWord(tutor.getExperienceYears()));
         }
 
-        // Ставка
         if (tutor.getHourlyRate() != null) {
             addInfoRow(card, "💵 Ставка:", tutor.getHourlyRate() + " ₽/час");
         }
 
-        // ПРЕДМЕТЫ - НОВОЕ!
-        if (tutor.getSubjects() != null && !tutor.getSubjects().trim().isEmpty()) {
+        // ПРЕДМЕТЫ
+        if (tutor.getSubjects() != null && !tutor.getSubjects().isEmpty()) {
             Separator sep = new Separator();
             card.getChildren().add(sep);
 
@@ -154,30 +144,16 @@ public class TutorDetailsDialog {
             subjectsTitle.setStyle("-fx-text-fill: #333;");
             card.getChildren().add(subjectsTitle);
 
-            // Разбиваем предметы по строкам
-            String[] subjects = tutor.getSubjects().split("\\n");
-            FlowPane subjectsFlow = new FlowPane(8, 8);
-            subjectsFlow.setPadding(new Insets(5, 0, 0, 0));
-
-            for (String subject : subjects) {
-                String trimmed = subject.trim();
-                if (!trimmed.isEmpty()) {
-                    Label subjectBadge = new Label(trimmed);
-                    subjectBadge.setStyle(
-                        "-fx-background-color: #E3F2FD; " +
-                        "-fx-text-fill: #1976D2; " +
-                        "-fx-padding: 5 12; " +
-                        "-fx-background-radius: 15; " +
-                        "-fx-font-size: 12px; " +
-                        "-fx-font-weight: bold;"
-                    );
-                    subjectsFlow.getChildren().add(subjectBadge);
-                }
-            }
-            card.getChildren().add(subjectsFlow);
+            String subjectsStr = tutor.getSubjects().stream()
+                .map(s -> s.getName())
+                .collect(Collectors.joining(", "));
+            
+            Label subjectsLabel = new Label(subjectsStr);
+            subjectsLabel.setWrapText(true);
+            subjectsLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 13px; -fx-padding: 5 0 0 0;");
+            card.getChildren().add(subjectsLabel);
         }
 
-        // О себе
         if (tutor.getBio() != null && !tutor.getBio().isEmpty()) {
             Separator sep = new Separator();
             card.getChildren().add(sep);
@@ -193,7 +169,6 @@ public class TutorDetailsDialog {
             card.getChildren().addAll(bioTitle, bioText);
         }
 
-        // Контакты
         if (tutor.getEmail() != null || tutor.getPhoneNumber() != null) {
             Separator sep = new Separator();
             card.getChildren().add(sep);
@@ -272,7 +247,6 @@ public class TutorDetailsDialog {
         card.setPadding(new Insets(15));
         card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 8;");
 
-        // Шапка с именем студента и рейтингом
         HBox header = new HBox(10);
         header.setAlignment(Pos.CENTER_LEFT);
 
@@ -297,7 +271,6 @@ public class TutorDetailsDialog {
 
         header.getChildren().addAll(nameLabel, spacer, ratingLabel);
 
-        // Комментарий
         String comment = review.has("comment") && !review.get("comment").isJsonNull() ? 
             review.get("comment").getAsString() : "Комментарий не оставлен";
 
@@ -306,7 +279,6 @@ public class TutorDetailsDialog {
         commentLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
         commentLabel.setPadding(new Insets(5, 0, 0, 0));
 
-        // Дата
         String dateStr = "";
         if (review.has("createdAt") && !review.get("createdAt").isJsonNull()) {
             try {

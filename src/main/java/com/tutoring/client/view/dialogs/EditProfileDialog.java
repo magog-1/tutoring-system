@@ -1,5 +1,7 @@
 package com.tutoring.client.view.dialogs;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
@@ -8,6 +10,7 @@ import javafx.scene.layout.GridPane;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class EditProfileDialog {
     private JsonObject profileData;
@@ -81,9 +84,10 @@ public class EditProfileDialog {
             bioArea.setPrefRowCount(3);
             bioArea.setWrapText(true);
             
-            // НОВОЕ ПОЛЕ - Предметы
+            // ПОЛЕ ПРЕДМЕТОВ
             subjectsArea = new TextArea();
-            subjectsArea.setText(getJsonString(profileData, "subjects"));
+            String subjectsStr = extractSubjectsFromJson(profileData);
+            subjectsArea.setText(subjectsStr);
             subjectsArea.setPromptText("Предметы (по одному на строку)\nНапример:\nМатематика\nФизика\nАнглийский язык");
             subjectsArea.setPrefRowCount(4);
             subjectsArea.setWrapText(true);
@@ -97,14 +101,12 @@ public class EditProfileDialog {
             grid.add(new Label("О себе:"), 0, row);
             grid.add(bioArea, 1, row++);
             
-            // Добавляем поле предметов
             Label subjectsLabel = new Label("Преподаваемые предметы:");
             subjectsLabel.setStyle("-fx-alignment: top-left;");
             grid.add(subjectsLabel, 0, row);
             grid.add(subjectsArea, 1, row++);
             
-            // Подсказка
-            Label hintLabel = new Label("⚠️ Укажите предметы, которые вы преподаёте");
+            Label hintLabel = new Label("⚠️ Укажите предметы, которые вы преподаёте (каждый с новой строки)");
             hintLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 11px; -fx-font-style: italic;");
             hintLabel.setWrapText(true);
             grid.add(hintLabel, 1, row++);
@@ -158,7 +160,7 @@ public class EditProfileDialog {
                     result.put("hourlyRate", finalHourlyRateField.getText());
                     result.put("bio", finalBioArea.getText());
                     
-                    // Добавляем предметы
+                    // Предметы - каждый с новой строки
                     result.put("subjects", finalSubjectsArea.getText());
                 } else {
                     ComboBox<String> combo = (ComboBox<String>) grid.getChildren().get(7);
@@ -177,6 +179,28 @@ public class EditProfileDialog {
         });
         
         return dialog.showAndWait();
+    }
+    
+    private String extractSubjectsFromJson(JsonObject profileData) {
+        if (!profileData.has("subjects") || profileData.get("subjects").isJsonNull()) {
+            return "";
+        }
+        
+        try {
+            JsonArray subjectsArray = profileData.getAsJsonArray("subjects");
+            StringBuilder sb = new StringBuilder();
+            for (JsonElement element : subjectsArray) {
+                if (element.isJsonObject()) {
+                    JsonObject subjectObj = element.getAsJsonObject();
+                    if (subjectObj.has("name")) {
+                        sb.append(subjectObj.get("name").getAsString()).append("\n");
+                    }
+                }
+            }
+            return sb.toString().trim();
+        } catch (Exception e) {
+            return "";
+        }
     }
     
     private String getJsonString(JsonObject json, String key) {
