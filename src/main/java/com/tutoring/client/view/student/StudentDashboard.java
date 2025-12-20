@@ -10,6 +10,7 @@ import com.tutoring.client.view.LoginView;
 import com.tutoring.client.view.dialogs.ChangePasswordDialog;
 import com.tutoring.client.view.dialogs.CreateReviewDialog;
 import com.tutoring.client.view.dialogs.EditProfileDialog;
+import com.tutoring.client.view.dialogs.TutorDetailsDialog;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -226,8 +227,9 @@ public class StudentDashboard {
 
         tutorTable.getColumns().addAll(nameCol, educationCol, ratingCol, rateCol);
 
-        Button refreshButton = new Button("Обновить");
-        refreshButton.setOnAction(e -> loadTutors());
+        Button viewProfileButton = new Button("Просмотр профиля");
+        viewProfileButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+        viewProfileButton.setOnAction(e -> viewTutorProfile());
 
         Button bookButton = new Button("Забронировать занятие");
         bookButton.setOnAction(e -> bookLesson());
@@ -236,7 +238,11 @@ public class StudentDashboard {
         reviewButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white;");
         reviewButton.setOnAction(e -> createReview());
 
-        HBox buttonBox = new HBox(10, refreshButton, bookButton, reviewButton);
+        Button refreshButton = new Button("Обновить");
+        refreshButton.setStyle("-fx-background-color: #757575; -fx-text-fill: white;");
+        refreshButton.setOnAction(e -> loadTutors());
+
+        HBox buttonBox = new HBox(10, viewProfileButton, bookButton, reviewButton, refreshButton);
 
         content.getChildren().addAll(titleLabel, tutorTable, buttonBox);
         view.setCenter(content);
@@ -888,6 +894,22 @@ public class StudentDashboard {
             }).start();
         });
     }
+
+    private void viewTutorProfile() {
+        TutorDTO selectedTutor = tutorTable.getSelectionModel().getSelectedItem();
+        if (selectedTutor == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Предупреждение");
+            alert.setHeaderText("Репетитор не выбран");
+            alert.setContentText("Пожалуйста, выберите репетитора из списка.");
+            alert.showAndWait();
+            return;
+        }
+
+        TutorDetailsDialog dialog = new TutorDetailsDialog(selectedTutor);
+        dialog.show((Stage) view.getScene().getWindow());
+    }
+
 
     public BorderPane getView() {
         return view;
