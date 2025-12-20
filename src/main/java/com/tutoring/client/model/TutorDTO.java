@@ -16,6 +16,7 @@ public class TutorDTO {
     private String bio;
     private Boolean verified;
     private List<SubjectDTO> subjects;
+    private Integer totalReviews;
 
     public TutorDTO() {}
 
@@ -113,6 +114,14 @@ public class TutorDTO {
 
     public void setSubjects(List<SubjectDTO> subjects) {
         this.subjects = subjects;
+    }
+
+    public Integer getTotalReviews() {
+        return totalReviews != null ? totalReviews : 0;
+    }
+
+    public void setTotalReviews(Integer totalReviews) {
+        this.totalReviews = totalReviews;
     }
 
     public String getFullName() {
