@@ -7,10 +7,12 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.Map;
 
 public class ApiClient {
     private static final String BASE_URL = "http://localhost:8080/api";
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+    private static final MediaType FORM_URLENCODED = MediaType.get("application/x-www-form-urlencoded; charset=utf-8");
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     
     private final OkHttpClient client;
@@ -55,6 +57,10 @@ public class ApiClient {
         this.authToken = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
     }
     
+    public void setAuthToken(String token) {
+        this.authToken = "Bearer " + token;
+    }
+    
     public <T> T get(String endpoint, Class<T> responseClass) throws IOException {
         Request request = new Request.Builder()
                 .url(BASE_URL + endpoint)
@@ -80,6 +86,43 @@ public class ApiClient {
     public <T> T post(String endpoint, Object requestBody, Class<T> responseClass) throws IOException {
         String json = gson.toJson(requestBody);
         RequestBody body = RequestBody.create(json, JSON);
+        
+        Request.Builder requestBuilder = new Request.Builder()
+                .url(BASE_URL + endpoint)
+                .post(body);
+        
+        if (authToken != null) {
+            requestBuilder.addHeader("Authorization", authToken);
+        }
+        
+        Request request = requestBuilder.build();
+        
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "Unknown error";
+                throw new IOException("Ошибка " + response.code() + ": " + errorBody);
+            }
+            String responseJson = response.body().string();
+            if (responseClass == Void.class || responseJson.isEmpty()) {
+                return null;
+            }
+            
+            // Если запрашивается String.class - возвращаем сырую строку
+            if (responseClass == String.class) {
+                return (T) responseJson;
+            }
+            
+            return gson.fromJson(responseJson, responseClass);
+        }
+    }
+    
+    // Новый метод для отправки form data
+    public <T> T postForm(String endpoint, Map<String, String> formData, Class<T> responseClass) throws IOException {
+        FormBody.Builder formBuilder = new FormBody.Builder();
+        for (Map.Entry<String, String> entry : formData.entrySet()) {
+            formBuilder.add(entry.getKey(), entry.getValue());
+        }
+        RequestBody body = formBuilder.build();
         
         Request.Builder requestBuilder = new Request.Builder()
                 .url(BASE_URL + endpoint)
