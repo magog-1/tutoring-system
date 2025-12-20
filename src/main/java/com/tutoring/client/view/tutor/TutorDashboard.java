@@ -110,17 +110,17 @@ public class TutorDashboard {
         card.setPrefWidth(130);
         
         Label emojiLabel = new Label(emoji);
-        emojiLabel.setFont(new Font(16));
+        emojiLabel.setFont(new Font(18));
         
         Label valueLabel = new Label(value);
-        valueLabel.setFont(Font.font("System", FontWeight.BOLD, 18));
+        valueLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
         valueLabel.setStyle("-fx-text-fill: white;");
         
         Label labelText = new Label(label);
-        labelText.setFont(new Font(8));
+        labelText.setFont(new Font(10));
         labelText.setStyle("-fx-text-fill: rgba(255,255,255,0.9);");
         labelText.setWrapText(true);
-        labelText.setMaxWidth(100);
+        labelText.setMaxWidth(120);
         labelText.setAlignment(Pos.CENTER);
         labelText.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
         
