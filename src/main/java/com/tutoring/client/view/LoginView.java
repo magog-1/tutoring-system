@@ -1,7 +1,9 @@
 package com.tutoring.client.view;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.UserDTO;
@@ -102,22 +104,71 @@ public class LoginView {
                     
                     // Парсим ответ
                     Gson gson = GsonProvider.getGson();
-                    JsonObject responseJson = gson.fromJson(loginResponse, JsonObject.class);
+                    JsonElement responseElement = JsonParser.parseString(loginResponse);
                     
-                    // Извлекаем токен
-                    String token = responseJson.get("token").getAsString();
-                    session.getApiClient().setAuthToken(token);
+                    String token;
+                    UserDTO user;
                     
-                    // Извлекаем информацию о пользователе из ответа
-                    JsonObject userJson = responseJson.getAsJsonObject("user");
-                    UserDTO user = gson.fromJson(userJson, UserDTO.class);
+                    if (responseElement.isJsonPrimitive()) {
+                        // Сервер вернул только JWT токен
+                        token = responseElement.getAsString();
+                        System.out.println("[DEBUG] Получен только токен: " + token);
+                        
+                        // Устанавливаем токен
+                        session.getApiClient().setAuthToken(token);
+                        
+                        // Создаём mock user с основными данными
+                        // TODO: Получить реальную информацию с сервера через /users/me или похожий эндпоинт
+                        user = new UserDTO();
+                        user.setUsername(usernameOrEmail);
+                        
+                        // Пытаемся распарсить JWT токен чтобы получить роль
+                        try {
+                            String[] parts = token.split("\\.");
+                            if (parts.length >= 2) {
+                                String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+                                JsonObject payloadJson = gson.fromJson(payload, JsonObject.class);
+                                
+                                if (payloadJson.has("role")) {
+                                    user.setRole(payloadJson.get("role").getAsString());
+                                } else if (payloadJson.has("authorities")) {
+                                    // Spring Security может использовать authorities
+                                    String authorities = payloadJson.get("authorities").getAsString();
+                                    user.setRole(authorities.replace("ROLE_", ""));
+                                }
+                                
+                                if (payloadJson.has("sub")) {
+                                    user.setUsername(payloadJson.get("sub").getAsString());
+                                }
+                            }
+                        } catch (Exception ex) {
+                            System.err.println("[WARNING] Не удалось распарсить JWT: " + ex.getMessage());
+                            // По умолчанию - student
+                            user.setRole("STUDENT");
+                        }
+                        
+                    } else if (responseElement.isJsonObject()) {
+                        // Сервер вернул JSON объект
+                        JsonObject responseJson = responseElement.getAsJsonObject();
+                        
+                        // Извлекаем токен
+                        token = responseJson.get("token").getAsString();
+                        session.getApiClient().setAuthToken(token);
+                        
+                        // Извлекаем информацию о пользователе из ответа
+                        JsonObject userJson = responseJson.getAsJsonObject("user");
+                        user = gson.fromJson(userJson, UserDTO.class);
+                    } else {
+                        throw new Exception("Неподдерживаемый формат ответа сервера");
+                    }
                     
                     System.out.println("[DEBUG] Получена информация о пользователе: " + user.getUsername() + ", роль: " + user.getRole());
                     
                     session.setCurrentUser(user);
                     
+                    final UserDTO finalUser = user;
                     Platform.runLater(() -> {
-                        openDashboard(user.getRole());
+                        openDashboard(finalUser.getRole());
                     });
                     
                 } catch (Exception ex) {
