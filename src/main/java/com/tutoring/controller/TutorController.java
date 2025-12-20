@@ -2,7 +2,9 @@ package com.tutoring.controller;
 
 import com.tutoring.model.Lesson;
 import com.tutoring.model.Review;
+import com.tutoring.model.Subject;
 import com.tutoring.model.Tutor;
+import com.tutoring.repository.SubjectRepository;
 import com.tutoring.repository.TutorRepository;
 import com.tutoring.service.LessonService;
 import com.tutoring.service.ReviewService;
@@ -10,11 +12,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tutor")
@@ -28,6 +31,9 @@ public class TutorController {
 
     @Autowired
     private ReviewService reviewService;
+
+    @Autowired
+    private SubjectRepository subjectRepository;
 
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile() {
@@ -51,6 +57,7 @@ public class TutorController {
     }
 
     @PutMapping("/profile")
+    @Transactional
     public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> updates) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -73,16 +80,61 @@ public class TutorController {
                 tutor.setEducation(updates.get("education"));
             }
             if (updates.containsKey("experienceYears")) {
-                tutor.setExperienceYears(Integer.parseInt(updates.get("experienceYears")));
+                try {
+                    tutor.setExperienceYears(Integer.parseInt(updates.get("experienceYears")));
+                } catch (NumberFormatException e) {
+                    // Игнорируем неверный формат
+                }
             }
             if (updates.containsKey("hourlyRate")) {
-                tutor.setHourlyRate(new BigDecimal(updates.get("hourlyRate")));
+                try {
+                    tutor.setHourlyRate(new BigDecimal(updates.get("hourlyRate")));
+                } catch (NumberFormatException e) {
+                    // Игнорируем неверный формат
+                }
             }
             if (updates.containsKey("bio")) {
                 tutor.setBio(updates.get("bio"));
             }
 
+            // ОБРАБОТКА ПРЕДМЕТОВ
+            if (updates.containsKey("subjects")) {
+                String subjectsStr = updates.get("subjects");
+                if (subjectsStr != null && !subjectsStr.trim().isEmpty()) {
+                    // Разбиваем по строкам
+                    String[] subjectNames = subjectsStr.split("\\n");
+                    Set<Subject> newSubjects = new HashSet<>();
+
+                    for (String name : subjectNames) {
+                        name = name.trim();
+                        if (!name.isEmpty()) {
+                            // Ищем или создаём предмет
+                            Subject subject = subjectRepository.findByName(name)
+                                    .orElseGet(() -> {
+                                        Subject newSubject = new Subject();
+                                        newSubject.setName(name);
+                                        return subjectRepository.save(newSubject);
+                                    });
+                            newSubjects.add(subject);
+                        }
+                    }
+
+                    // Обновляем список предметов
+                    tutor.getSubjects().clear();
+                    tutor.getSubjects().addAll(newSubjects);
+                } else {
+                    // Если пусто - очищаем
+                    tutor.getSubjects().clear();
+                }
+            }
+
             Tutor updated = tutorRepository.save(tutor);
+            
+            // Загружаем subjects для ответа
+            if (updated.getSubjects() != null) {
+                updated.getSubjects().size();
+            }
+            
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             e.printStackTrace();
@@ -118,11 +170,9 @@ public class TutorController {
     @GetMapping("/lessons")
     public ResponseEntity<?> getMyLessons() {
         try {
-            // Получаем текущего авторизованного пользователя
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String username = authentication.getName();
 
-            // Находим репетитора
             Tutor tutor = tutorRepository.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Репетитор не найден"));
 
@@ -130,8 +180,8 @@ public class TutorController {
             
             // Явно загружаем LAZY ассоциации для сериализации
             lessons.forEach(lesson -> {
-                lesson.getStudent().getFirstName(); // триггер для загрузки Student
-                lesson.getSubject().getName();      // триггер для загрузки Subject
+                lesson.getStudent().getFirstName();
+                lesson.getSubject().getName();
             });
             
             return ResponseEntity.ok(lessons);
