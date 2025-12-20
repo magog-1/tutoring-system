@@ -43,7 +43,7 @@ public class RegisterView {
         emailField.setPromptText("Email");
         
         PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Пароль");
+        passwordField.setPromptText("Пароль (минимум 6 символов)");
         
         PasswordField confirmPasswordField = new PasswordField();
         confirmPasswordField.setPromptText("Подтвердите пароль");
@@ -86,21 +86,59 @@ public class RegisterView {
         
         Label statusLabel = new Label();
         statusLabel.setStyle("-fx-text-fill: red;");
+        statusLabel.setWrapText(true);
+        statusLabel.setMaxWidth(400);
+        statusLabel.setAlignment(Pos.CENTER);
+        
+        // Информационное сообщение о требованиях к паролю
+        Label passwordHintLabel = new Label("Требования: пароль должен содержать минимум 6 символов");
+        passwordHintLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 11px;");
+        passwordHintLabel.setWrapText(true);
+        passwordHintLabel.setMaxWidth(400);
+        passwordHintLabel.setAlignment(Pos.CENTER);
         
         registerButton.setOnAction(e -> {
-            if (!passwordField.getText().equals(confirmPasswordField.getText())) {
+            // Валидация полей
+            if (usernameField.getText().trim().isEmpty()) {
+                statusLabel.setText("Введите имя пользователя");
+                return;
+            }
+            
+            if (emailField.getText().trim().isEmpty()) {
+                statusLabel.setText("Введите email");
+                return;
+            }
+            
+            // Валидация пароля
+            String password = passwordField.getText();
+            if (password.length() < 6) {
+                statusLabel.setText("Пароль должен содержать минимум 6 символов");
+                return;
+            }
+            
+            if (!password.equals(confirmPasswordField.getText())) {
                 statusLabel.setText("Пароли не совпадают");
+                return;
+            }
+            
+            if (firstNameField.getText().trim().isEmpty()) {
+                statusLabel.setText("Введите имя");
+                return;
+            }
+            
+            if (lastNameField.getText().trim().isEmpty()) {
+                statusLabel.setText("Введите фамилию");
                 return;
             }
             
             try {
                 Map<String, Object> request = new HashMap<>();
-                request.put("username", usernameField.getText());
-                request.put("email", emailField.getText());
-                request.put("password", passwordField.getText());
-                request.put("firstName", firstNameField.getText());
-                request.put("lastName", lastNameField.getText());
-                request.put("phoneNumber", phoneField.getText());
+                request.put("username", usernameField.getText().trim());
+                request.put("email", emailField.getText().trim());
+                request.put("password", password);
+                request.put("firstName", firstNameField.getText().trim());
+                request.put("lastName", lastNameField.getText().trim());
+                request.put("phoneNumber", phoneField.getText().trim());
                 request.put("role", roleCombo.getValue().equals("Студент") ? "STUDENT" : "TUTOR");
                 
                 UserDTO user = Session.getInstance().getApiClient()
@@ -108,8 +146,16 @@ public class RegisterView {
                 
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
                 alert.setTitle("Успех");
-                alert.setHeaderText(null);
-                alert.setContentText("Регистрация успешна! Теперь вы можете войти.");
+                alert.setHeaderText("Регистрация успешна!");
+                
+                if (roleCombo.getValue().equals("Репетитор")) {
+                    alert.setContentText("Регистрация успешна!\n\n" +
+                        "Ваш аккаунт репетитора ожидает верификации менеджером.\n" +
+                        "После верификации вы сможете войти в систему.");
+                } else {
+                    alert.setContentText("Регистрация успешна! Теперь вы можете войти.");
+                }
+                
                 alert.showAndWait();
                 
                 // Возврат на экран входа
@@ -131,6 +177,7 @@ public class RegisterView {
         
         view.getChildren().addAll(
             titleLabel,
+            passwordHintLabel,
             grid,
             registerButton,
             backButton,
