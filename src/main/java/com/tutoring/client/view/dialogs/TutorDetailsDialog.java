@@ -15,6 +15,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
@@ -141,6 +142,39 @@ public class TutorDetailsDialog {
         // Ставка
         if (tutor.getHourlyRate() != null) {
             addInfoRow(card, "💵 Ставка:", tutor.getHourlyRate() + " ₽/час");
+        }
+
+        // ПРЕДМЕТЫ - НОВОЕ!
+        if (tutor.getSubjects() != null && !tutor.getSubjects().trim().isEmpty()) {
+            Separator sep = new Separator();
+            card.getChildren().add(sep);
+
+            Label subjectsTitle = new Label("📚 Преподаваемые предметы:");
+            subjectsTitle.setFont(Font.font("System", FontWeight.BOLD, 14));
+            subjectsTitle.setStyle("-fx-text-fill: #333;");
+            card.getChildren().add(subjectsTitle);
+
+            // Разбиваем предметы по строкам
+            String[] subjects = tutor.getSubjects().split("\\n");
+            FlowPane subjectsFlow = new FlowPane(8, 8);
+            subjectsFlow.setPadding(new Insets(5, 0, 0, 0));
+
+            for (String subject : subjects) {
+                String trimmed = subject.trim();
+                if (!trimmed.isEmpty()) {
+                    Label subjectBadge = new Label(trimmed);
+                    subjectBadge.setStyle(
+                        "-fx-background-color: #E3F2FD; " +
+                        "-fx-text-fill: #1976D2; " +
+                        "-fx-padding: 5 12; " +
+                        "-fx-background-radius: 15; " +
+                        "-fx-font-size: 12px; " +
+                        "-fx-font-weight: bold;"
+                    );
+                    subjectsFlow.getChildren().add(subjectBadge);
+                }
+            }
+            card.getChildren().add(subjectsFlow);
         }
 
         // О себе
