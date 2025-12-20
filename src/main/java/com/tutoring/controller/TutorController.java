@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tutor")
@@ -104,16 +103,20 @@ public class TutorController {
                     // Разбиваем по строкам
                     String[] subjectNames = subjectsStr.split("\\n");
                     Set<Subject> newSubjects = new HashSet<>();
+                    
+                    // Создаём финальную переменную для использования в лямбде
+                    final SubjectRepository subjectRepo = this.subjectRepository;
 
                     for (String name : subjectNames) {
                         name = name.trim();
                         if (!name.isEmpty()) {
                             // Ищем или создаём предмет
-                            Subject subject = subjectRepository.findByName(name)
+                            final String subjectName = name; // Делаем effectively final
+                            Subject subject = subjectRepo.findByName(subjectName)
                                     .orElseGet(() -> {
                                         Subject newSubject = new Subject();
-                                        newSubject.setName(name);
-                                        return subjectRepository.save(newSubject);
+                                        newSubject.setName(subjectName);
+                                        return subjectRepo.save(newSubject);
                                     });
                             newSubjects.add(subject);
                         }
