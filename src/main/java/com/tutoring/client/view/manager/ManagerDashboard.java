@@ -164,7 +164,7 @@ public class ManagerDashboard {
         new Thread(() -> {
             try {
                 Session.getInstance().getApiClient()
-                    .put("/manager/tutors/" + selected.getId() + "/verify", null);
+                    .put("/manager/tutors/" + selected.getId() + "/verify", new HashMap<>());
                 
                 Platform.runLater(() -> {
                     Alert alert = new Alert(Alert.AlertType.INFORMATION, "Репетитор верифицирован!");
