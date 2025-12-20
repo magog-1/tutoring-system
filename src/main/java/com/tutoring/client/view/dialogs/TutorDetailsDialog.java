@@ -39,64 +39,71 @@ public class TutorDetailsDialog {
         dialog.initOwner(owner);
         dialog.setTitle("Профиль репетитора");
 
-        VBox mainBox = new VBox(20);
-        mainBox.setPadding(new Insets(25));
+        VBox mainBox = new VBox(15);
+        mainBox.setPadding(new Insets(20));
         mainBox.setStyle("-fx-background-color: #f9f9f9;");
 
+        // Заголовок с именем
         Label nameLabel = new Label(tutor.getFullName());
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
+        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 20));
         nameLabel.setStyle("-fx-text-fill: #2196F3;");
 
+        // Рейтинг
         HBox ratingBox = new HBox(10);
         ratingBox.setAlignment(Pos.CENTER_LEFT);
         
         String stars = getStars(tutor.getRating() != null ? tutor.getRating().intValue() : 0);
         Label starsLabel = new Label(stars);
-        starsLabel.setStyle("-fx-font-size: 20px; -fx-text-fill: #FFD700;");
+        starsLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #FFD700;");
         
         Label ratingLabel = new Label(
             String.format("%.1f / 5.0", tutor.getRating() != null ? tutor.getRating() : 0.0)
         );
-        ratingLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #666;");
+        ratingLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #666;");
         
         Label reviewCountLabel = new Label(
             "(" + (tutor.getTotalReviews() != null ? tutor.getTotalReviews() : 0) + " отзывов)"
         );
-        reviewCountLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #999;");
+        reviewCountLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
         
         ratingBox.getChildren().addAll(starsLabel, ratingLabel, reviewCountLabel);
 
+        // Карточка профиля (более компактная)
         VBox profileCard = createProfileCard();
 
         Separator separator = new Separator();
 
+        // Заголовок отзывов
         Label reviewsTitle = new Label("Отзывы");
-        reviewsTitle.setFont(Font.font("System", FontWeight.BOLD, 18));
+        reviewsTitle.setFont(Font.font("System", FontWeight.BOLD, 16));
         reviewsTitle.setStyle("-fx-text-fill: #333;");
 
-        VBox reviewsContainer = new VBox(15);
+        // Контейнер для отзывов
+        VBox reviewsContainer = new VBox(12);
         reviewsContainer.setPadding(new Insets(10));
 
         ProgressIndicator loadingIndicator = new ProgressIndicator();
-        loadingIndicator.setMaxSize(50, 50);
+        loadingIndicator.setMaxSize(40, 40);
         VBox loadingBox = new VBox(loadingIndicator);
         loadingBox.setAlignment(Pos.CENTER);
         loadingBox.setPadding(new Insets(30));
         reviewsContainer.getChildren().add(loadingBox);
 
+        // ScrollPane для отзывов - даём ему больше места!
         ScrollPane reviewsScroll = new ScrollPane(reviewsContainer);
         reviewsScroll.setFitToWidth(true);
         reviewsScroll.setStyle("-fx-background-color: transparent;");
-        reviewsScroll.setPrefHeight(300);
+        // Убираем фиксированную высоту, даём растягиваться
         VBox.setVgrow(reviewsScroll, Priority.ALWAYS);
 
+        // Кнопка закрытия
         Button closeButton = new Button("Закрыть");
-        closeButton.setStyle("-fx-background-color: #757575; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10 30;");
+        closeButton.setStyle("-fx-background-color: #757575; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 25;");
         closeButton.setOnAction(e -> dialog.close());
 
         HBox buttonBox = new HBox(closeButton);
         buttonBox.setAlignment(Pos.CENTER);
-        buttonBox.setPadding(new Insets(10, 0, 0, 0));
+        buttonBox.setPadding(new Insets(5, 0, 0, 0));
 
         mainBox.getChildren().addAll(
             nameLabel, 
@@ -108,7 +115,8 @@ public class TutorDetailsDialog {
             buttonBox
         );
 
-        Scene scene = new Scene(mainBox, 750, 700);
+        // Уменьшаем размер окна: 650x650 вместо 750x700
+        Scene scene = new Scene(mainBox, 650, 650);
         dialog.setScene(scene);
 
         loadReviews(reviewsContainer);
@@ -117,9 +125,9 @@ public class TutorDetailsDialog {
     }
 
     private VBox createProfileCard() {
-        VBox card = new VBox(12);
-        card.setPadding(new Insets(20));
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);");
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(15));
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 8, 0, 0, 0);");
 
         if (tutor.getEducation() != null && !tutor.getEducation().isEmpty()) {
             addInfoRow(card, "🎓 Образование:", tutor.getEducation());
@@ -140,7 +148,7 @@ public class TutorDetailsDialog {
             card.getChildren().add(sep);
 
             Label subjectsTitle = new Label("📚 Преподаваемые предметы:");
-            subjectsTitle.setFont(Font.font("System", FontWeight.BOLD, 14));
+            subjectsTitle.setFont(Font.font("System", FontWeight.BOLD, 12));
             subjectsTitle.setStyle("-fx-text-fill: #333;");
             card.getChildren().add(subjectsTitle);
 
@@ -150,7 +158,7 @@ public class TutorDetailsDialog {
             
             Label subjectsLabel = new Label(subjectsStr);
             subjectsLabel.setWrapText(true);
-            subjectsLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 13px; -fx-padding: 5 0 0 0;");
+            subjectsLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 12px; -fx-padding: 3 0 0 0;");
             card.getChildren().add(subjectsLabel);
         }
 
@@ -159,12 +167,12 @@ public class TutorDetailsDialog {
             card.getChildren().add(sep);
 
             Label bioTitle = new Label("📝 О себе:");
-            bioTitle.setFont(Font.font("System", FontWeight.BOLD, 14));
+            bioTitle.setFont(Font.font("System", FontWeight.BOLD, 12));
             bioTitle.setStyle("-fx-text-fill: #333;");
 
             Label bioText = new Label(tutor.getBio());
             bioText.setWrapText(true);
-            bioText.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
+            bioText.setStyle("-fx-text-fill: #555; -fx-font-size: 12px;");
 
             card.getChildren().addAll(bioTitle, bioText);
         }
@@ -174,7 +182,7 @@ public class TutorDetailsDialog {
             card.getChildren().add(sep);
 
             Label contactTitle = new Label("📞 Контакты:");
-            contactTitle.setFont(Font.font("System", FontWeight.BOLD, 14));
+            contactTitle.setFont(Font.font("System", FontWeight.BOLD, 12));
             contactTitle.setStyle("-fx-text-fill: #333;");
             card.getChildren().add(contactTitle);
 
@@ -190,16 +198,16 @@ public class TutorDetailsDialog {
     }
 
     private void addInfoRow(VBox parent, String label, String value) {
-        HBox row = new HBox(10);
+        HBox row = new HBox(8);
         row.setAlignment(Pos.CENTER_LEFT);
 
         Label labelText = new Label(label);
-        labelText.setFont(Font.font("System", FontWeight.BOLD, 13));
+        labelText.setFont(Font.font("System", FontWeight.BOLD, 12));
         labelText.setStyle("-fx-text-fill: #666;");
-        labelText.setMinWidth(180);
+        labelText.setMinWidth(160);
 
         Label valueText = new Label(value);
-        valueText.setStyle("-fx-text-fill: #333; -fx-font-size: 13px;");
+        valueText.setStyle("-fx-text-fill: #333; -fx-font-size: 12px;");
         valueText.setWrapText(true);
 
         row.getChildren().addAll(labelText, valueText);
@@ -243,11 +251,11 @@ public class TutorDetailsDialog {
     }
 
     private VBox createReviewCard(JsonObject review) {
-        VBox card = new VBox(8);
-        card.setPadding(new Insets(15));
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 8;");
+        VBox card = new VBox(6);
+        card.setPadding(new Insets(12));
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 6; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 6;");
 
-        HBox header = new HBox(10);
+        HBox header = new HBox(8);
         header.setAlignment(Pos.CENTER_LEFT);
 
         String studentName = "N/A";
@@ -259,7 +267,7 @@ public class TutorDetailsDialog {
         }
 
         Label nameLabel = new Label("👤 " + studentName);
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
         nameLabel.setStyle("-fx-text-fill: #333;");
 
         Region spacer = new Region();
@@ -267,7 +275,7 @@ public class TutorDetailsDialog {
 
         int rating = review.has("rating") ? review.get("rating").getAsInt() : 0;
         Label ratingLabel = new Label(getStars(rating));
-        ratingLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #FFD700;");
+        ratingLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #FFD700;");
 
         header.getChildren().addAll(nameLabel, spacer, ratingLabel);
 
@@ -276,8 +284,8 @@ public class TutorDetailsDialog {
 
         Label commentLabel = new Label(comment);
         commentLabel.setWrapText(true);
-        commentLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
-        commentLabel.setPadding(new Insets(5, 0, 0, 0));
+        commentLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 12px;");
+        commentLabel.setPadding(new Insets(4, 0, 0, 0));
 
         String dateStr = "";
         if (review.has("createdAt") && !review.get("createdAt").isJsonNull()) {
@@ -290,7 +298,7 @@ public class TutorDetailsDialog {
         }
 
         Label dateLabel = new Label("📅 " + dateStr);
-        dateLabel.setStyle("-fx-text-fill: #999; -fx-font-size: 11px; -fx-font-style: italic;");
+        dateLabel.setStyle("-fx-text-fill: #999; -fx-font-size: 10px; -fx-font-style: italic;");
 
         card.getChildren().addAll(header, commentLabel, dateLabel);
 
@@ -300,20 +308,20 @@ public class TutorDetailsDialog {
     private void showNoReviews(VBox container) {
         container.getChildren().clear();
         Label noReviewsLabel = new Label("Отзывов пока нет");
-        noReviewsLabel.setStyle("-fx-text-fill: #999; -fx-font-style: italic; -fx-font-size: 14px;");
+        noReviewsLabel.setStyle("-fx-text-fill: #999; -fx-font-style: italic; -fx-font-size: 13px;");
         VBox emptyBox = new VBox(noReviewsLabel);
         emptyBox.setAlignment(Pos.CENTER);
-        emptyBox.setPadding(new Insets(50));
+        emptyBox.setPadding(new Insets(40));
         container.getChildren().add(emptyBox);
     }
 
     private void showErrorMessage(VBox container, String message) {
         container.getChildren().clear();
         Label errorLabel = new Label("Ошибка загрузки: " + message);
-        errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 14px;");
+        errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 13px;");
         VBox errorBox = new VBox(errorLabel);
         errorBox.setAlignment(Pos.CENTER);
-        errorBox.setPadding(new Insets(50));
+        errorBox.setPadding(new Insets(40));
         container.getChildren().add(errorBox);
     }
 
