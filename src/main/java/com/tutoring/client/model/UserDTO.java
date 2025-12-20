@@ -66,4 +66,10 @@ public class UserDTO {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
+
+    public String getFullName() {
+        String first = firstName != null ? firstName : "";
+        String last = lastName != null ? lastName : "";
+        return (first + " " + last).trim();
+    }
 }
