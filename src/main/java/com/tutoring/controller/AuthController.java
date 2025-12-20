@@ -1,6 +1,5 @@
 package com.tutoring.controller;
 
-import com.tutoring.dto.UserDTO;
 import com.tutoring.model.User;
 import com.tutoring.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -55,27 +58,40 @@ public class AuthController {
                         .body("Пользователь не авторизован");
             }
             
-            String username = authentication.getName();
-            User user = userService.findByUsernameOrEmail(username, username);
+            String usernameOrEmail = authentication.getName();
+            System.out.println("[DEBUG] Current user from authentication: " + usernameOrEmail);
             
-            if (user == null) {
+            // Пытаемся найти по username
+            Optional<User> userOpt = userService.findByUsername(usernameOrEmail);
+            
+            // Если не нашли, пробуем по email
+            if (userOpt.isEmpty()) {
+                userOpt = userService.findByEmail(usernameOrEmail);
+            }
+            
+            if (userOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("Пользователь не найден");
             }
             
-            // Конвертируем User в UserDTO
-            UserDTO userDTO = new UserDTO();
-            userDTO.setId(user.getId());
-            userDTO.setUsername(user.getUsername());
-            userDTO.setEmail(user.getEmail());
-            userDTO.setFirstName(user.getFirstName());
-            userDTO.setLastName(user.getLastName());
-            userDTO.setPhoneNumber(user.getPhoneNumber());
-            userDTO.setRole(user.getRole().name()); // STUDENT, TUTOR, MANAGER, ADMIN
+            User user = userOpt.get();
+            
+            // Создаём простой DTO как Map
+            Map<String, Object> userDTO = new HashMap<>();
+            userDTO.put("id", user.getId());
+            userDTO.put("username", user.getUsername());
+            userDTO.put("email", user.getEmail());
+            userDTO.put("firstName", user.getFirstName());
+            userDTO.put("lastName", user.getLastName());
+            userDTO.put("phoneNumber", user.getPhone()); // Клиент ожидает phoneNumber
+            userDTO.put("role", user.getRole().name()); // STUDENT, TUTOR, MANAGER, ADMIN
+            
+            System.out.println("[DEBUG] Returning user: " + user.getUsername() + ", role: " + user.getRole().name());
             
             return ResponseEntity.ok(userDTO);
             
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Ошибка при получении данных пользователя");
         }
