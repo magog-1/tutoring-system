@@ -8,6 +8,7 @@ import com.tutoring.client.api.Session;
 import com.tutoring.client.model.*;
 import com.tutoring.client.view.LoginView;
 import com.tutoring.client.view.dialogs.ChangePasswordDialog;
+import com.tutoring.client.view.dialogs.CreateReviewDialog;
 import com.tutoring.client.view.dialogs.EditProfileDialog;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -184,61 +185,65 @@ public class StudentDashboard {
         menu.getChildren().addAll(searchTutorsBtn, myLessonsBtn, profileBtn);
         return menu;
     }
-    
+
     private void showTutorSearch() {
         VBox content = new VBox(15);
         content.setPadding(new Insets(20));
-        
+
         Label titleLabel = new Label("Поиск репетиторов");
         titleLabel.setFont(new Font(18));
-        
+
         tutorTable = new TableView<>();
-        
+
         TableColumn<TutorDTO, String> nameCol = new TableColumn<>("Имя");
-        nameCol.setCellValueFactory(data -> 
-            new javafx.beans.property.SimpleStringProperty(
-                (data.getValue().getFirstName() != null ? data.getValue().getFirstName() : "") + " " + 
-                (data.getValue().getLastName() != null ? data.getValue().getLastName() : "")
-            )
+        nameCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        (data.getValue().getFirstName() != null ? data.getValue().getFirstName() : "") + " " +
+                                (data.getValue().getLastName() != null ? data.getValue().getLastName() : "")
+                )
         );
-        
+
         TableColumn<TutorDTO, String> educationCol = new TableColumn<>("Образование");
-        educationCol.setCellValueFactory(data -> 
-            new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getEducation() != null ? data.getValue().getEducation() : "N/A"
-            )
+        educationCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        data.getValue().getEducation() != null ? data.getValue().getEducation() : "N/A"
+                )
         );
-        
+
         TableColumn<TutorDTO, String> ratingCol = new TableColumn<>("Рейтинг");
-        ratingCol.setCellValueFactory(data -> 
-            new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getRating() != null ? String.format("%.1f", data.getValue().getRating()) : "0.0"
-            )
+        ratingCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        data.getValue().getRating() != null ? String.format("%.1f", data.getValue().getRating()) : "0.0"
+                )
         );
-        
+
         TableColumn<TutorDTO, String> rateCol = new TableColumn<>("Цена/час");
-        rateCol.setCellValueFactory(data -> 
-            new javafx.beans.property.SimpleStringProperty(
-                data.getValue().getHourlyRate() != null ? data.getValue().getHourlyRate().toString() + " ₽" : "N/A"
-            )
+        rateCol.setCellValueFactory(data ->
+                new javafx.beans.property.SimpleStringProperty(
+                        data.getValue().getHourlyRate() != null ? data.getValue().getHourlyRate().toString() + " ₽" : "N/A"
+                )
         );
-        
+
         tutorTable.getColumns().addAll(nameCol, educationCol, ratingCol, rateCol);
-        
+
         Button refreshButton = new Button("Обновить");
         refreshButton.setOnAction(e -> loadTutors());
-        
+
         Button bookButton = new Button("Забронировать занятие");
         bookButton.setOnAction(e -> bookLesson());
-        
-        HBox buttonBox = new HBox(10, refreshButton, bookButton);
-        
+
+        Button reviewButton = new Button("Оставить отзыв");
+        reviewButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white;");
+        reviewButton.setOnAction(e -> createReview());
+
+        HBox buttonBox = new HBox(10, refreshButton, bookButton, reviewButton);
+
         content.getChildren().addAll(titleLabel, tutorTable, buttonBox);
         view.setCenter(content);
-        
+
         loadTutors();
     }
-    
+
     private void loadTutors() {
         new Thread(() -> {
             try {
@@ -828,7 +833,62 @@ public class StudentDashboard {
         Scene scene = new Scene(loginView.getView(), 400, 500);
         primaryStage.setScene(scene);
     }
-    
+
+    private void createReview() {
+        TutorDTO selectedTutor = tutorTable.getSelectionModel().getSelectedItem();
+        if (selectedTutor == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Предупреждение");
+            alert.setHeaderText("Репетитор не выбран");
+            alert.setContentText("Пожалуйста, выберите репетитора из списка.");
+            alert.showAndWait();
+            return;
+        }
+
+        CreateReviewDialog dialog = new CreateReviewDialog(selectedTutor, null);
+        dialog.show().ifPresent(reviewData -> {
+            new Thread(() -> {
+                try {
+                    System.out.println("[DEBUG] Отправляем отзыв: " + reviewData);
+
+                    Session.getInstance().getApiClient()
+                            .post("/student/reviews", reviewData, String.class);
+
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("Успех");
+                        alert.setHeaderText("Отзыв отправлен!");
+                        alert.setContentText(
+                                "Ваш отзыв о репетиторе " + selectedTutor.getFullName() +
+                                        " успешно опубликован.\nСпасибо за ваше мнение!"
+                        );
+                        alert.showAndWait();
+
+                        // Обновляем список репетиторов чтобы увидеть обновлённый рейтинг
+                        loadTutors();
+                    });
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Platform.runLater(() -> {
+                        Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                        errorAlert.setTitle("Ошибка");
+                        errorAlert.setHeaderText("Ошибка отправки отзыва");
+
+                        String errorMessage = ex.getMessage();
+                        if (errorMessage != null && errorMessage.contains("already reviewed")) {
+                            errorAlert.setContentText("Вы уже оставляли отзыв этому репетитору.");
+                        } else {
+                            errorAlert.setContentText("Не удалось отправить отзыв: " + errorMessage);
+                        }
+
+                        errorAlert.showAndWait();
+                    });
+                }
+            }).start();
+        });
+    }
+
     public BorderPane getView() {
         return view;
     }
