@@ -96,7 +96,7 @@ public class LoginView {
                     
                     // Извлекаем токен
                     String token = responseJson.get("token").getAsString();
-                    session.setToken(token);
+                    session.getApiClient().setAuthToken(token);
                     
                     // Извлекаем информацию о пользователе из ответа
                     JsonObject userJson = responseJson.getAsJsonObject("user");

@@ -55,6 +55,10 @@ public class ApiClient {
         this.authToken = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
     }
     
+    public void setAuthToken(String token) {
+        this.authToken = "Bearer " + token;
+    }
+    
     public <T> T get(String endpoint, Class<T> responseClass) throws IOException {
         Request request = new Request.Builder()
                 .url(BASE_URL + endpoint)
