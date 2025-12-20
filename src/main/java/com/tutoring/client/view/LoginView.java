@@ -1,10 +1,13 @@
 package com.tutoring.client.view;
 
+import com.google.gson.Gson;
+import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.UserDTO;
 import com.tutoring.client.view.student.StudentDashboard;
 import com.tutoring.client.view.tutor.TutorDashboard;
 import com.tutoring.client.view.manager.ManagerDashboard;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -47,6 +50,13 @@ public class LoginView {
         
         Label statusLabel = new Label();
         statusLabel.setStyle("-fx-text-fill: red;");
+        statusLabel.setWrapText(true);
+        statusLabel.setMaxWidth(300);
+        statusLabel.setAlignment(Pos.CENTER);
+        
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        progressIndicator.setVisible(false);
+        progressIndicator.setMaxSize(30, 30);
         
         loginButton.setOnAction(e -> {
             String username = usernameField.getText();
@@ -57,38 +67,54 @@ public class LoginView {
                 return;
             }
             
-            try {
-                Session session = Session.getInstance();
-                session.login(username, password);
-                
-                // Получаем информацию о пользователе (mock)
-                UserDTO user = new UserDTO();
-                user.setUsername(username);
-                user.setFirstName(username);
-                user.setLastName("");
-                // Определяем роль по username
-                if (username.contains("student")) {
-                    user.setRole("STUDENT");
-                } else if (username.contains("tutor")) {
-                    user.setRole("TUTOR");
-                } else if (username.contains("manager")) {
-                    user.setRole("MANAGER");
-                } else {
-                    user.setRole("STUDENT");
+            // Показываем индикатор загрузки
+            loginButton.setDisable(true);
+            progressIndicator.setVisible(true);
+            statusLabel.setText("Вход...");
+            statusLabel.setStyle("-fx-text-fill: #2196F3;");
+            
+            new Thread(() -> {
+                try {
+                    Session session = Session.getInstance();
+                    session.login(username, password);
+                    
+                    // Получаем реальную информацию о пользователе с сервера
+                    String userInfoResponse = session.getApiClient().get("/auth/me", String.class);
+                    
+                    Gson gson = GsonProvider.getGson();
+                    UserDTO user = gson.fromJson(userInfoResponse, UserDTO.class);
+                    
+                    System.out.println("[DEBUG] Получена информация о пользователе: " + user.getUsername() + ", роль: " + user.getRole());
+                    
+                    session.setCurrentUser(user);
+                    
+                    Platform.runLater(() -> {
+                        openDashboard(user.getRole());
+                    });
+                    
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Platform.runLater(() -> {
+                        loginButton.setDisable(false);
+                        progressIndicator.setVisible(false);
+                        statusLabel.setStyle("-fx-text-fill: red;");
+                        
+                        String errorMessage = ex.getMessage();
+                        if (errorMessage != null && errorMessage.contains("403")) {
+                            statusLabel.setText("Неправильное имя пользователя или пароль");
+                        } else if (errorMessage != null && errorMessage.contains("not verified")) {
+                            statusLabel.setText("Ваш аккаунт ещё не прошёл верификацию.\nПожалуйста, обратитесь к менеджеру.");
+                        } else {
+                            statusLabel.setText("Ошибка входа: " + errorMessage);
+                        }
+                    });
                 }
-                
-                session.setCurrentUser(user);
-                openDashboard(user.getRole());
-                
-            } catch (Exception ex) {
-                statusLabel.setText("Ошибка входа: " + ex.getMessage());
-                ex.printStackTrace();
-            }
+            }).start();
         });
         
         registerButton.setOnAction(e -> {
             RegisterView registerView = new RegisterView(primaryStage);
-            Scene scene = new Scene(registerView.getView(), 450, 650);
+            Scene scene = new Scene(registerView.getView(), 450, 700);
             primaryStage.setScene(scene);
         });
         
@@ -99,6 +125,7 @@ public class LoginView {
             new Label("Пароль:"),
             passwordField,
             loginButton,
+            progressIndicator,
             registerButton,
             statusLabel
         );
