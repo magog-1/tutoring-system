@@ -47,6 +47,7 @@ public class Lesson {
     @Column(length = 1000)
     private String homework;
 
+    @Column(updatable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime confirmedAt;
@@ -61,6 +62,13 @@ public class Lesson {
         this.scheduledTime = scheduledTime;
         this.durationMinutes = durationMinutes;
         this.price = price;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
     public Long getId() {

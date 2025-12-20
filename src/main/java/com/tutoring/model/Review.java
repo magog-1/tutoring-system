@@ -29,7 +29,7 @@ public class Review {
     @Column(length = 2000)
     private String comment;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     // Конструкторы
@@ -40,6 +40,14 @@ public class Review {
         this.student = student;
         this.rating = rating;
         this.comment = comment;
+    }
+
+    // Автоматически устанавливаем createdAt перед сохранением
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
     // Геттеры и сеттеры
