@@ -110,9 +110,49 @@ public class ApiClient {
         }
     }
     
+    // Перегруженный метод для прямой передачи JSON строки
+    public String post(String endpoint, String jsonBody) throws IOException {
+        RequestBody body = RequestBody.create(jsonBody, JSON);
+        
+        Request.Builder requestBuilder = new Request.Builder()
+                .url(BASE_URL + endpoint)
+                .post(body);
+        
+        if (authToken != null) {
+            requestBuilder.addHeader("Authorization", authToken);
+        }
+        
+        Request request = requestBuilder.build();
+        
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "Unknown error";
+                throw new IOException("Ошибка " + response.code() + ": " + errorBody);
+            }
+            return response.body().string();
+        }
+    }
+    
     public void put(String endpoint, Object requestBody) throws IOException {
         String json = requestBody != null ? gson.toJson(requestBody) : "";
         RequestBody body = RequestBody.create(json, JSON);
+        
+        Request request = new Request.Builder()
+                .url(BASE_URL + endpoint)
+                .put(body)
+                .addHeader("Authorization", authToken)
+                .build();
+        
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Ошибка: " + response.code());
+            }
+        }
+    }
+    
+    // Перегруженный метод для прямой передачи JSON строки
+    public void put(String endpoint, String jsonBody) throws IOException {
+        RequestBody body = RequestBody.create(jsonBody, JSON);
         
         Request request = new Request.Builder()
                 .url(BASE_URL + endpoint)
