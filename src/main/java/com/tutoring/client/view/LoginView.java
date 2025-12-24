@@ -1,10 +1,13 @@
 package com.tutoring.client.view;
 
+import com.google.gson.Gson;
+import com.tutoring.client.api.GsonProvider;
 import com.tutoring.client.api.Session;
 import com.tutoring.client.model.UserDTO;
 import com.tutoring.client.view.student.StudentDashboard;
 import com.tutoring.client.view.tutor.TutorDashboard;
 import com.tutoring.client.view.manager.ManagerDashboard;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -47,9 +50,16 @@ public class LoginView {
         
         Label statusLabel = new Label();
         statusLabel.setStyle("-fx-text-fill: red;");
+        statusLabel.setWrapText(true);
+        statusLabel.setMaxWidth(300);
+        statusLabel.setAlignment(Pos.CENTER);
+        
+        ProgressIndicator progressIndicator = new ProgressIndicator();
+        progressIndicator.setVisible(false);
+        progressIndicator.setMaxSize(30, 30);
         
         loginButton.setOnAction(e -> {
-            String username = usernameField.getText();
+            String username = usernameField.getText().trim();
             String password = passwordField.getText();
             
             if (username.isEmpty() || password.isEmpty()) {
@@ -57,33 +67,62 @@ public class LoginView {
                 return;
             }
             
-            try {
-                Session session = Session.getInstance();
-                session.login(username, password);
-                
-                // Получаем информацию о пользователе (mock)
-                UserDTO user = new UserDTO();
-                user.setUsername(username);
-                user.setFirstName(username);
-                user.setLastName("");
-                // Определяем роль по username
-                if (username.contains("student")) {
-                    user.setRole("STUDENT");
-                } else if (username.contains("tutor")) {
-                    user.setRole("TUTOR");
-                } else if (username.contains("manager")) {
-                    user.setRole("MANAGER");
-                } else {
-                    user.setRole("STUDENT");
+            // Показываем индикатор
+            loginButton.setDisable(true);
+            progressIndicator.setVisible(true);
+            statusLabel.setText("Вход...");
+            statusLabel.setStyle("-fx-text-fill: #2196F3;");
+            
+            // Выполняем в отдельном потоке
+            new Thread(() -> {
+                try {
+                    Session session = Session.getInstance();
+                    
+                    // Шаг 1: Логин (Basic Auth)
+                    session.login(username, password);
+                    System.out.println("[DEBUG] Логин успешен, получаем данные пользователя...");
+                    
+                    // Шаг 2: Получаем данные пользователя с сервера
+                    String userJsonResponse = session.getApiClient().get("/auth/current-user", String.class);
+                    System.out.println("[DEBUG] Ответ сервера: " + userJsonResponse);
+                    
+                    // Шаг 3: Парсим JSON в UserDTO
+                    Gson gson = GsonProvider.getGson();
+                    UserDTO user = gson.fromJson(userJsonResponse, UserDTO.class);
+                    
+                    System.out.println("[DEBUG] Пользователь: " + user.getUsername() + ", роль: " + user.getRole());
+                    
+                    // Шаг 4: Сохраняем в сессию
+                    session.setCurrentUser(user);
+                    
+                    // Шаг 5: Открываем дашборд
+                    final String role = user.getRole();
+                    Platform.runLater(() -> {
+                        openDashboard(role);
+                    });
+                    
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Platform.runLater(() -> {
+                        loginButton.setDisable(false);
+                        progressIndicator.setVisible(false);
+                        statusLabel.setStyle("-fx-text-fill: red;");
+                        
+                        String errorMsg = ex.getMessage();
+                        if (errorMsg != null) {
+                            if (errorMsg.contains("401") || errorMsg.contains("403")) {
+                                statusLabel.setText("Неправильное имя пользователя или пароль");
+                            } else if (errorMsg.contains("not verified") || errorMsg.contains("не верифицирован")) {
+                                statusLabel.setText("Ваш аккаунт ожидает верификации.\nПожалуйста, дождитесь подтверждения.");
+                            } else {
+                                statusLabel.setText("Ошибка входа: " + errorMsg);
+                            }
+                        } else {
+                            statusLabel.setText("Ошибка входа");
+                        }
+                    });
                 }
-                
-                session.setCurrentUser(user);
-                openDashboard(user.getRole());
-                
-            } catch (Exception ex) {
-                statusLabel.setText("Ошибка входа: " + ex.getMessage());
-                ex.printStackTrace();
-            }
+            }).start();
         });
         
         registerButton.setOnAction(e -> {
@@ -99,6 +138,7 @@ public class LoginView {
             new Label("Пароль:"),
             passwordField,
             loginButton,
+            progressIndicator,
             registerButton,
             statusLabel
         );
