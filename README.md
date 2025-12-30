@@ -14,15 +14,10 @@
 - [Основные возможности](#-основные-возможности)
 - [Технологический стек](#-технологический-стек)
 - [Архитектура](#-архитектура)
-- [Требования](#-требования)
 - [Установка и запуск](#-установка-и-запуск)
 - [Конфигурация](#-конфигурация)
 - [Структура проекта](#-структура-проекта)
 - [API Endpoints](#-api-endpoints)
-- [Скриншоты](#-скриншоты)
-- [Разработка](#-разработка)
-- [Contributing](#-contributing)
-- [Лицензия](#-лицензия)
 
 ## 🎯 Описание
 
@@ -162,14 +157,6 @@
 │         PostgreSQL Database             │
 └─────────────────────────────────────────┘
 ```
-
-## 💻 Требования
-
-### Системные требования
-
-- **OS**: Windows 10+, macOS 10.14+, Linux (Ubuntu 20.04+)
-- **RAM**: минимум 2GB (рекомендуется 4GB)
-- **Disk**: 500MB свободного места
 
 ### Программное обеспечение
 
@@ -461,23 +448,6 @@ GET    /api/tutors/{id}/reviews       # Отзывы репетитора
 GET    /api/tutors/search             # Поиск репетиторов
 ```
 
-## 📸 Скриншоты
-
-### Страница входа
-![Login](docs/screenshots/login.png)
-
-### Дашборд студента
-![Student Dashboard](docs/screenshots/student-dashboard.png)
-
-### Дашборд репетитора
-![Tutor Dashboard](docs/screenshots/tutor-dashboard.png)
-
-### Календарь занятий
-![Calendar](docs/screenshots/calendar.png)
-
-### Редактирование профиля
-![Edit Profile](docs/screenshots/edit-profile.png)
-
 ## 👨‍💻 Разработка
 
 ### Настройка среды разработки
@@ -518,102 +488,3 @@ mvn test -Dtest=LessonServiceTest
 # Генерация отчёта о покрытии
 mvn jacoco:report
 ```
-
-### Code Style
-
-Проект следует:
-- [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
-- Максимальная длина строки: 120 символов
-- Используйте Lombok для уменьшения boilerplate
-
-### Git Workflow
-
-1. Создайте feature branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-2. Сделайте изменения и commit:
-   ```bash
-   git add .
-   git commit -m "feat: add new feature"
-   ```
-
-3. Push и создайте Pull Request:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-### Commit Convention
-
-```
-feat: новая функция
-fix: исправление бага
-docs: изменения в документации
-style: форматирование кода
-refactor: рефакторинг
-test: добавление тестов
-chore: обновление зависимостей
-```
-
-## 🤝 Contributing
-
-Мы приветствуем вклад в развитие проекта!
-
-### Как внести вклад
-
-1. Fork репозитория
-2. Создайте feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit изменения (`git commit -m 'Add some AmazingFeature'`)
-4. Push в branch (`git push origin feature/AmazingFeature`)
-5. Откройте Pull Request
-
-### Issues
-
-Если вы нашли баг или хотите предложить улучшение:
-1. Проверьте, что issue ещё не существует
-2. Создайте новый issue с подробным описанием
-3. Используйте метки (bug, enhancement, question)
-
-## 📝 Changelog
-
-### [1.0.0] - 2025-12-19
-
-#### Added
-- Полнофункциональная система управления занятиями
-- JavaFX десктоп клиент с современным UI
-- REST API на Spring Boot
-- Система аутентификации и авторизации
-- Календарь занятий с визуализацией
-- Управление профилями с редактированием
-- Система отзывов и рейтингов
-- Смена пароля с валидацией
-- Русскоязычный интерфейс
-- Статусы занятий на русском языке
-
-## 📄 Лицензия
-
-Этот проект распространяется под лицензией MIT. См. файл [LICENSE](LICENSE) для подробностей.
-
-## 👥 Авторы
-
-- **magog-1** - *Initial work* - [GitHub](https://github.com/magog-1)
-
-## 📞 Контакты
-
-- **GitHub**: [magog-1](https://github.com/magog-1)
-- **Email**: your-email@example.com
-- **Issues**: [GitHub Issues](https://github.com/magog-1/tutoring-system/issues)
-
-## 🙏 Благодарности
-
-- Spring Framework Team
-- JavaFX Community
-- PostgreSQL Development Group
-- Все contributors проекта
-
----
-
-<p align="center">
-  Made with ❤️ by <a href="https://github.com/magog-1">magog-1</a>
-</p>
